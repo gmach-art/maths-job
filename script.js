@@ -398,6 +398,8 @@ const state = {
   questions: [],
   index: 0,
   answers: [], // { selectedIndex: number|null, correct: boolean }
+  pendingIndex: null, // option chosen but not yet confirmed
+  confirmed: false, // whether the current question's answer has been locked in
   secondsLeft: TARGET_SECONDS,
   timerId: null,
   startedAt: null,
@@ -474,42 +476,61 @@ function updateTimerDisplay() {
 
 function renderQuestion() {
   const q = state.questions[state.index];
+  state.pendingIndex = null;
+  state.confirmed = false;
+
   el.questionCounter.textContent = `Question ${state.index + 1} of ${TOTAL_QUESTIONS}`;
   el.progressFill.style.width = `${((state.index + 1) / TOTAL_QUESTIONS) * 100}%`;
   el.questionCategory.textContent = q.category;
   el.questionPrompt.textContent = q.prompt;
   el.optionsContainer.innerHTML = "";
   el.nextBtn.disabled = true;
-  el.nextBtn.textContent = state.index === TOTAL_QUESTIONS - 1 ? "See results" : "Next question";
+  el.nextBtn.textContent = "Confirm answer";
 
   q.options.forEach((optionText, i) => {
     const btn = document.createElement("button");
     btn.className = "option";
     btn.type = "button";
     btn.textContent = optionText;
-    btn.addEventListener("click", () => selectOption(i));
+    btn.addEventListener("click", () => chooseOption(i));
     el.optionsContainer.appendChild(btn);
   });
 }
 
-function selectOption(selectedIndex) {
+function chooseOption(index) {
+  if (state.confirmed) return; // answer already locked in for this question
+
+  state.pendingIndex = index;
+  const buttons = Array.from(el.optionsContainer.children);
+  buttons.forEach((btn, i) => btn.classList.toggle("selected", i === index));
+  el.nextBtn.disabled = false;
+}
+
+function confirmAnswer() {
   const q = state.questions[state.index];
   const buttons = Array.from(el.optionsContainer.children);
 
-  // Lock in the answer; no changing your mind, matching real test conditions.
   buttons.forEach((btn, i) => {
     btn.disabled = true;
     if (i === q.correctIndex) btn.classList.add("correct");
-    if (i === selectedIndex && i !== q.correctIndex) btn.classList.add("incorrect");
-    if (i === selectedIndex) btn.classList.add("selected");
+    if (i === state.pendingIndex && i !== q.correctIndex) btn.classList.add("incorrect");
   });
 
   state.answers[state.index] = {
-    selectedIndex,
-    correct: selectedIndex === q.correctIndex,
+    selectedIndex: state.pendingIndex,
+    correct: state.pendingIndex === q.correctIndex,
   };
+  state.confirmed = true;
 
-  el.nextBtn.disabled = false;
+  el.nextBtn.textContent = state.index === TOTAL_QUESTIONS - 1 ? "See results" : "Next question";
+}
+
+function handleActionClick() {
+  if (!state.confirmed) {
+    confirmAnswer();
+  } else {
+    goToNext();
+  }
 }
 
 function goToNext() {
@@ -578,5 +599,5 @@ function renderResults(elapsedSeconds, timedOut) {
 }
 
 el.startBtn.addEventListener("click", startQuiz);
-el.nextBtn.addEventListener("click", goToNext);
+el.nextBtn.addEventListener("click", handleActionClick);
 el.restartBtn.addEventListener("click", startQuiz);
