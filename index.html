@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Numerical Reasoning Trainer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <h1>Numerical Reasoning Trainer</h1>
+      <p class="subtitle">Practice questions in the style of Bain SOVA, BCG, and SHL numerical/verbal-numerical tests</p>
+    </header>
+
+    <main>
+      <!-- START SCREEN -->
+      <section id="start-screen" class="screen active">
+        <div class="card">
+          <h2>Ready to test yourself?</h2>
+          <ul class="info-list">
+            <li><strong>10 questions</strong> &mdash; all word problems, no charts or graphs</li>
+            <li>Topics: algebra, weighted averages, relative speed, simultaneous equations, ratios, work rate, percentages, compound growth, and mixtures</li>
+            <li>Target completion time: <strong id="target-time-display">15:00</strong> <span class="hint">(about 90 seconds per question &mdash; typical of real assessment centres)</span></li>
+            <li>Multiple choice &mdash; one attempt per question, no going back</li>
+          </ul>
+          <button id="start-btn" class="btn primary">Start test</button>
+        </div>
+      </section>
+
+      <!-- QUIZ SCREEN -->
+      <section id="quiz-screen" class="screen">
+        <div class="quiz-topbar">
+          <div class="progress-wrap">
+            <span id="question-counter">Question 1 of 10</span>
+            <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+          </div>
+          <div id="timer" class="timer">15:00</div>
+        </div>
+
+        <div class="card">
+          <span id="question-category" class="category-tag"></span>
+          <p id="question-prompt" class="prompt"></p>
+          <div id="options" class="options"></div>
+        </div>
+
+        <div class="quiz-controls">
+          <button id="next-btn" class="btn primary" disabled>Next question</button>
+        </div>
+      </section>
+
+      <!-- RESULTS SCREEN -->
+      <section id="results-screen" class="screen">
+        <div class="card">
+          <h2 id="results-headline">Results</h2>
+          <div class="results-summary">
+            <div class="stat">
+              <span id="score-value" class="stat-value">0/10</span>
+              <span class="stat-label">Correct</span>
+            </div>
+            <div class="stat">
+              <span id="time-value" class="stat-value">0:00</span>
+              <span class="stat-label">Time taken</span>
+            </div>
+            <div class="stat">
+              <span id="target-value" class="stat-value">15:00</span>
+              <span class="stat-label">Target time</span>
+            </div>
+          </div>
+          <p id="pace-message" class="pace-message"></p>
+
+          <h3>Review</h3>
+          <div id="review-list" class="review-list"></div>
+
+          <button id="restart-btn" class="btn primary">Try 10 new questions</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
