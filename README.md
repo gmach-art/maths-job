@@ -11,6 +11,11 @@ opens on a main menu with three sections: **Companies**, **Networking**, and
 **Prep**. Prep opens its own submenu of practice tools, currently just the
 Numerical Reasoning quiz described below.
 
+Companies has two subsections: **Following**, where you search for and
+follow companies you're interested in (e.g. Google, Meta), and **News**,
+which shows a quick news link for each company you follow. Followed
+companies are saved in the browser's local storage.
+
 If you'd rather serve it locally:
 
 ```bash
@@ -38,7 +43,8 @@ python3 -m http.server 8000
 
 - `index.html` — main menu (Companies / Networking / Prep)
 - `menu.css` — shared menu styling (main menu and submenus)
-- `companies.html` — companies section (placeholder)
+- `companies.html` — companies section (Following + News subsections)
+- `companies.js` — follow/unfollow logic and localStorage persistence
 - `networking.html` — networking section (placeholder)
 - `prep.html` — prep submenu (currently just Numerical Reasoning Test)
 - `numerical-reasoning.html` — quiz page structure and screens (start / quiz / results)

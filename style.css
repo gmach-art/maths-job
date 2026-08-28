@@ -427,7 +427,128 @@ body {
   margin: 6px 0 0;
 }
 
+/* ---------- companies: following & news subsections ---------- */
+
+.companies-subsection + .companies-subsection {
+  margin-top: 28px;
+  border-top: 1px solid var(--border);
+  padding-top: 22px;
+}
+
+.companies-subsection h2 {
+  margin: 0 0 6px;
+  font-size: 1.1rem;
+}
+
+.subsection-desc {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin: 0 0 14px;
+}
+
+.follow-form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.company-search-input {
+  flex: 1;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.98rem;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--surface);
+}
+
+.company-search-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.follow-form .btn {
+  flex-shrink: 0;
+}
+
+.followed-companies-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.company-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--tag-bg);
+  color: var(--tag-text);
+  border-radius: 999px;
+  padding: 8px 8px 8px 14px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.company-chip-remove {
+  border: none;
+  background: none;
+  color: var(--tag-text);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 50%;
+  opacity: 0.7;
+}
+
+.company-chip-remove:hover {
+  opacity: 1;
+  background: rgba(47, 95, 239, 0.12);
+}
+
+.companies-news-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.company-news-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  text-decoration: none;
+  color: var(--text);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.company-news-item:hover {
+  border-color: var(--accent);
+  background: var(--tag-bg);
+}
+
+.company-news-name {
+  font-weight: 600;
+}
+
+.company-news-link {
+  color: var(--accent);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.companies-empty {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
 @media (max-width: 480px) {
   .card { padding: 20px; }
   .results-summary { flex-direction: column; }
+  .follow-form { flex-direction: column; }
+  .company-news-item { flex-direction: column; align-items: flex-start; gap: 4px; }
 }

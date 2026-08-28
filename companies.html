@@ -9,16 +9,41 @@
 <body>
   <div class="app">
     <header class="app-header">
+      <a class="back-link" href="index.html">&larr; Menu</a>
       <h1>Companies</h1>
     </header>
     <main>
       <section class="screen active">
         <div class="card">
-          <p>Company tracking coming soon.</p>
-          <a class="btn primary" href="index.html" style="text-decoration:none; display:inline-block; text-align:center;">Back to menu</a>
+          <!-- FOLLOWING SUBSECTION -->
+          <section class="companies-subsection" aria-labelledby="following-heading">
+            <h2 id="following-heading">Following</h2>
+            <p class="subsection-desc">Search for a company you're interested in and follow it to keep track of it here.</p>
+            <form id="follow-form" class="follow-form">
+              <input
+                id="company-search-input"
+                class="company-search-input"
+                type="text"
+                placeholder="e.g. Google, Meta, Amazon&hellip;"
+                autocomplete="off"
+                aria-label="Search for a company to follow"
+              />
+              <button type="submit" class="btn primary">Follow</button>
+            </form>
+            <div id="followed-companies-list" class="followed-companies-list"></div>
+          </section>
+
+          <!-- NEWS SUBSECTION -->
+          <section class="companies-subsection" aria-labelledby="news-heading">
+            <h2 id="news-heading">News</h2>
+            <p class="subsection-desc">Quick links to the latest news for the companies you follow.</p>
+            <div id="companies-news-list" class="companies-news-list"></div>
+          </section>
         </div>
       </section>
     </main>
   </div>
+
+  <script src="companies.js"></script>
 </body>
 </html>
