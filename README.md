@@ -6,7 +6,9 @@ BCG online test, SHL numerical reasoning, etc.).
 
 ## Running it
 
-No build step or server required — just open `index.html` in a browser.
+No build step or server required — just open `index.html` in a browser. It
+opens on a main menu with three sections: **Companies**, **Networking**, and
+**Prep** (the quiz described below).
 
 If you'd rather serve it locally:
 
@@ -15,7 +17,7 @@ python3 -m http.server 8000
 # then open http://localhost:8000
 ```
 
-## What it does
+## What the Prep quiz does
 
 - Generates **10 multiple-choice word problems** per attempt, with randomised
   numbers so every playthrough is different.
@@ -33,6 +35,10 @@ python3 -m http.server 8000
 
 ## Files
 
-- `index.html` — page structure and screens (start / quiz / results)
-- `style.css` — styling
+- `index.html` — main menu (Companies / Networking / Prep)
+- `menu.css` — main menu styling
+- `companies.html` — companies section (placeholder)
+- `networking.html` — networking section (placeholder)
+- `prep.html` — quiz page structure and screens (start / quiz / results)
+- `style.css` — quiz/prep styling
 - `script.js` — question generators, quiz engine, timer, and DOM logic

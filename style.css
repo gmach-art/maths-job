@@ -32,6 +32,20 @@ body {
 .app-header {
   text-align: center;
   margin-bottom: 28px;
+  position: relative;
+}
+
+.back-link {
+  position: absolute;
+  left: 0;
+  top: 4px;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  text-decoration: none;
+}
+
+.back-link:hover {
+  color: var(--accent);
 }
 
 .app-header h1 {
