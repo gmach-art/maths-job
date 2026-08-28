@@ -8,7 +8,8 @@ BCG online test, SHL numerical reasoning, etc.).
 
 No build step or server required — just open `index.html` in a browser. It
 opens on a main menu with three sections: **Companies**, **Networking**, and
-**Prep** (the quiz described below).
+**Prep**. Prep opens its own submenu of practice tools, currently just the
+Numerical Reasoning quiz described below.
 
 If you'd rather serve it locally:
 
@@ -36,9 +37,10 @@ python3 -m http.server 8000
 ## Files
 
 - `index.html` — main menu (Companies / Networking / Prep)
-- `menu.css` — main menu styling
+- `menu.css` — shared menu styling (main menu and submenus)
 - `companies.html` — companies section (placeholder)
 - `networking.html` — networking section (placeholder)
-- `prep.html` — quiz page structure and screens (start / quiz / results)
-- `style.css` — quiz/prep styling
+- `prep.html` — prep submenu (currently just Numerical Reasoning Test)
+- `numerical-reasoning.html` — quiz page structure and screens (start / quiz / results)
+- `style.css` — quiz styling
 - `script.js` — question generators, quiz engine, timer, and DOM logic

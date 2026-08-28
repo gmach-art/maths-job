@@ -27,6 +27,20 @@ body {
 .menu-header {
   text-align: center;
   margin-bottom: 40px;
+  position: relative;
+}
+
+.back-link {
+  position: absolute;
+  left: 0;
+  top: 4px;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  text-decoration: none;
+}
+
+.back-link:hover {
+  color: var(--accent);
 }
 
 .menu-header h1 {
@@ -40,8 +54,9 @@ body {
 }
 
 .menu-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 20px;
 }
 
@@ -49,6 +64,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex: 1 1 220px;
+  max-width: 260px;
   min-height: 180px;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -77,8 +94,9 @@ body {
   font-weight: 700;
 }
 
-@media (max-width: 680px) {
-  .menu-grid {
-    grid-template-columns: 1fr;
+@media (max-width: 480px) {
+  .menu-box {
+    flex-basis: 100%;
+    max-width: 100%;
   }
 }
