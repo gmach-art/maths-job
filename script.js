@@ -2,6 +2,8 @@
 
 const TARGET_SECONDS = 15 * 60; // recommended completion time
 const TOTAL_QUESTIONS = 10;
+const HISTORY_KEY = "numericalReasoningTrainerHistory";
+const HISTORY_LIMIT = 30;
 
 /* ---------- small utilities ---------- */
 
@@ -23,6 +25,41 @@ function round1(n) {
 
 function round2(n) {
   return Math.round(n * 100) / 100;
+}
+
+/* ---------- attempt history (persisted locally per browser) ---------- */
+
+function loadHistory() {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveHistory(history) {
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(-HISTORY_LIMIT)));
+  } catch (e) {
+    // Storage unavailable (private browsing, quota, etc.) — progress just won't persist.
+  }
+}
+
+function recordAttempt(score, elapsedSeconds) {
+  const history = loadHistory();
+  history.push({ score, elapsedSeconds, timestamp: Date.now() });
+  saveHistory(history);
+  return history.slice(-HISTORY_LIMIT);
+}
+
+function clearHistory() {
+  try {
+    localStorage.removeItem(HISTORY_KEY);
+  } catch (e) {
+    // ignore
+  }
 }
 
 /**
@@ -426,6 +463,9 @@ const el = {
   paceMessage: document.getElementById("pace-message"),
   reviewList: document.getElementById("review-list"),
   resultsHeadline: document.getElementById("results-headline"),
+  progressChart: document.getElementById("progress-chart"),
+  progressTableWrap: document.getElementById("progress-table-wrap"),
+  clearHistoryBtn: document.getElementById("clear-history-btn"),
 };
 
 function formatClock(totalSeconds) {
@@ -550,13 +590,14 @@ function finishQuiz(timedOut) {
   const elapsedSeconds = timedOut
     ? TARGET_SECONDS
     : Math.round((Date.now() - state.startedAt) / 1000);
+  const score = state.answers.filter((a) => a && a.correct).length;
+  const history = recordAttempt(score, elapsedSeconds);
 
-  renderResults(elapsedSeconds, Boolean(timedOut));
+  renderResults(elapsedSeconds, Boolean(timedOut), score, history);
   showScreen(el.resultsScreen);
 }
 
-function renderResults(elapsedSeconds, timedOut) {
-  const score = state.answers.filter((a) => a && a.correct).length;
+function renderResults(elapsedSeconds, timedOut, score, history) {
   el.scoreValue.textContent = `${score}/${TOTAL_QUESTIONS}`;
   el.timeValue.textContent = formatClock(elapsedSeconds);
   el.targetValue.textContent = formatClock(TARGET_SECONDS);
@@ -574,6 +615,9 @@ function renderResults(elapsedSeconds, timedOut) {
   } else {
     el.resultsHeadline.textContent = "Room to improve";
   }
+
+  renderProgressChart(history);
+  renderProgressTable(history);
 
   el.reviewList.innerHTML = "";
   state.questions.forEach((q, i) => {
@@ -598,6 +642,204 @@ function renderResults(elapsedSeconds, timedOut) {
   });
 }
 
+/* ---------- progress chart (line chart of score across attempts) ---------- */
+
+function renderProgressChart(history) {
+  el.progressChart.innerHTML = "";
+
+  if (history.length < 2) {
+    const note = document.createElement("p");
+    note.className = "progress-empty";
+    note.textContent =
+      history.length === 0
+        ? "No attempts recorded yet."
+        : "Play again to start seeing your progress on a graph.";
+    el.progressChart.appendChild(note);
+    return;
+  }
+
+  const width = 560;
+  const height = 200;
+  const marginLeft = 30;
+  const marginRight = 12;
+  const marginTop = 14;
+  const marginBottom = 26;
+  const plotW = width - marginLeft - marginRight;
+  const plotH = height - marginTop - marginBottom;
+  const n = history.length;
+
+  const xFor = (i) => marginLeft + (i / (n - 1)) * plotW;
+  const yFor = (score) => marginTop + plotH - (score / TOTAL_QUESTIONS) * plotH;
+
+  const svgNS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNS, "svg");
+  svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  svg.setAttribute("class", "progress-svg");
+  svg.setAttribute("role", "img");
+  svg.setAttribute(
+    "aria-label",
+    `Line chart of score out of ${TOTAL_QUESTIONS} across ${n} attempts, from ${history[0].score} to ${history[n - 1].score}`
+  );
+
+  // gridlines + y-axis labels (fixed scale, since scores are always out of 10)
+  [0, 2, 4, 6, 8, 10].forEach((tick) => {
+    const y = yFor(tick);
+    const line = document.createElementNS(svgNS, "line");
+    line.setAttribute("x1", marginLeft);
+    line.setAttribute("x2", width - marginRight);
+    line.setAttribute("y1", y);
+    line.setAttribute("y2", y);
+    line.setAttribute("class", "progress-gridline");
+    svg.appendChild(line);
+
+    const label = document.createElementNS(svgNS, "text");
+    label.setAttribute("x", marginLeft - 6);
+    label.setAttribute("y", y);
+    label.setAttribute("text-anchor", "end");
+    label.setAttribute("dominant-baseline", "middle");
+    label.setAttribute("class", "progress-axis-label");
+    label.textContent = String(tick);
+    svg.appendChild(label);
+  });
+
+  // x-axis attempt labels, thinned out if there are many attempts
+  const step = Math.max(1, Math.ceil(n / 10));
+  history.forEach((_, i) => {
+    if (i % step !== 0 && i !== n - 1) return;
+    const label = document.createElementNS(svgNS, "text");
+    label.setAttribute("x", xFor(i));
+    label.setAttribute("y", height - marginBottom + 16);
+    label.setAttribute("text-anchor", "middle");
+    label.setAttribute("class", "progress-axis-label");
+    label.textContent = String(i + 1);
+    svg.appendChild(label);
+  });
+
+  // the line itself
+  let d = "";
+  history.forEach((h, i) => {
+    d += `${i === 0 ? "M" : "L"} ${xFor(i).toFixed(1)} ${yFor(h.score).toFixed(1)} `;
+  });
+  const path = document.createElementNS(svgNS, "path");
+  path.setAttribute("d", d.trim());
+  path.setAttribute("class", "progress-line");
+  path.setAttribute("fill", "none");
+  svg.appendChild(path);
+
+  // crosshair, hidden until hover/focus
+  const crosshair = document.createElementNS(svgNS, "line");
+  crosshair.setAttribute("y1", marginTop);
+  crosshair.setAttribute("y2", height - marginBottom);
+  crosshair.setAttribute("class", "progress-crosshair");
+  crosshair.style.opacity = "0";
+  svg.appendChild(crosshair);
+
+  const tooltip = document.createElement("div");
+  tooltip.className = "progress-tooltip";
+  tooltip.style.opacity = "0";
+
+  history.forEach((h, i) => {
+    const cx = xFor(i);
+    const cy = yFor(h.score);
+
+    const marker = document.createElementNS(svgNS, "circle");
+    marker.setAttribute("cx", cx);
+    marker.setAttribute("cy", cy);
+    marker.setAttribute("r", "4");
+    marker.setAttribute("class", "progress-marker");
+    svg.appendChild(marker);
+
+    // generous, keyboard-reachable hit target (spec: >= 24px diameter)
+    const hit = document.createElementNS(svgNS, "circle");
+    hit.setAttribute("cx", cx);
+    hit.setAttribute("cy", cy);
+    hit.setAttribute("r", "12");
+    hit.setAttribute("class", "progress-hit");
+    hit.setAttribute("tabindex", "0");
+    hit.setAttribute(
+      "aria-label",
+      `Attempt ${i + 1}: ${h.score} out of ${TOTAL_QUESTIONS}, completed in ${formatClock(h.elapsedSeconds)}`
+    );
+
+    const show = () => {
+      crosshair.setAttribute("x1", cx);
+      crosshair.setAttribute("x2", cx);
+      crosshair.style.opacity = "1";
+      tooltip.style.opacity = "1";
+      tooltip.style.left = `${(cx / width) * 100}%`;
+      tooltip.style.top = `${(cy / height) * 100}%`;
+      tooltip.innerHTML = "";
+      const value = document.createElement("div");
+      value.className = "progress-tooltip-value";
+      value.textContent = `${h.score}/${TOTAL_QUESTIONS}`;
+      const sub = document.createElement("div");
+      sub.className = "progress-tooltip-sub";
+      sub.textContent = `Attempt ${i + 1} · ${formatClock(h.elapsedSeconds)}`;
+      tooltip.appendChild(value);
+      tooltip.appendChild(sub);
+    };
+    const hide = () => {
+      crosshair.style.opacity = "0";
+      tooltip.style.opacity = "0";
+    };
+
+    hit.addEventListener("pointerenter", show);
+    hit.addEventListener("pointermove", show);
+    hit.addEventListener("pointerleave", hide);
+    hit.addEventListener("focus", show);
+    hit.addEventListener("blur", hide);
+    svg.appendChild(hit);
+  });
+
+  el.progressChart.appendChild(svg);
+  el.progressChart.appendChild(tooltip);
+}
+
+function renderProgressTable(history) {
+  if (history.length === 0) {
+    el.progressTableWrap.innerHTML = "";
+    return;
+  }
+
+  const table = document.createElement("table");
+  table.className = "progress-table";
+  table.innerHTML = `
+    <thead>
+      <tr><th>Attempt</th><th>Date</th><th>Score</th><th>Time taken</th></tr>
+    </thead>
+  `;
+  const tbody = document.createElement("tbody");
+
+  history.forEach((h, i) => {
+    const row = document.createElement("tr");
+    const date = new Date(h.timestamp);
+    const dateCell = document.createElement("td");
+    dateCell.textContent = date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    const attemptCell = document.createElement("td");
+    attemptCell.textContent = String(i + 1);
+    const scoreCell = document.createElement("td");
+    scoreCell.textContent = `${h.score}/${TOTAL_QUESTIONS}`;
+    const timeCell = document.createElement("td");
+    timeCell.textContent = formatClock(h.elapsedSeconds);
+
+    row.appendChild(attemptCell);
+    row.appendChild(dateCell);
+    row.appendChild(scoreCell);
+    row.appendChild(timeCell);
+    tbody.appendChild(row);
+  });
+
+  table.appendChild(tbody);
+  el.progressTableWrap.innerHTML = "";
+  el.progressTableWrap.appendChild(table);
+}
+
 el.startBtn.addEventListener("click", startQuiz);
 el.nextBtn.addEventListener("click", handleActionClick);
 el.restartBtn.addEventListener("click", startQuiz);
+el.clearHistoryBtn.addEventListener("click", () => {
+  if (!window.confirm("Clear your saved progress history? This can't be undone.")) return;
+  clearHistory();
+  renderProgressChart([]);
+  renderProgressTable([]);
+});
