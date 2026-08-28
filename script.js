@@ -454,7 +454,6 @@ const el = {
   questionCounter: document.getElementById("question-counter"),
   progressFill: document.getElementById("progress-fill"),
   timer: document.getElementById("timer"),
-  questionCategory: document.getElementById("question-category"),
   questionPrompt: document.getElementById("question-prompt"),
   optionsContainer: document.getElementById("options"),
   scoreValue: document.getElementById("score-value"),
@@ -521,7 +520,6 @@ function renderQuestion() {
 
   el.questionCounter.textContent = `Question ${state.index + 1} of ${TOTAL_QUESTIONS}`;
   el.progressFill.style.width = `${((state.index + 1) / TOTAL_QUESTIONS) * 100}%`;
-  el.questionCategory.textContent = q.category;
   el.questionPrompt.textContent = q.prompt;
   el.optionsContainer.innerHTML = "";
   el.nextBtn.disabled = true;
