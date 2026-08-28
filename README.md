@@ -12,9 +12,13 @@ opens on a main menu with three sections: **Companies**, **Networking**, and
 Numerical Reasoning quiz described below.
 
 Companies has two subsections: **Following**, where you search for and
-follow companies you're interested in (e.g. Google, Meta), and **News**,
-which shows a quick news link for each company you follow. Followed
-companies are saved in the browser's local storage.
+follow companies you're interested in — big or small, e.g. Google, Meta,
+Feedr, Rogo — and **News**, which for each followed company shows a link to
+its own news plus a link for each of its direct competitors (e.g. following
+Sunsave surfaces Project Solar UK as a competitor). A handful of well-known
+competitor relationships are prefilled automatically; for anything else you
+can add competitors by hand. Followed companies and their competitors are
+saved in the browser's local storage.
 
 If you'd rather serve it locally:
 

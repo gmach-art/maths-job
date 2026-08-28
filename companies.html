@@ -24,19 +24,22 @@
                 id="company-search-input"
                 class="company-search-input"
                 type="text"
-                placeholder="e.g. Google, Meta, Amazon&hellip;"
+                list="company-suggestions"
+                placeholder="e.g. Google, Meta, Feedr, Rogo&hellip;"
                 autocomplete="off"
-                aria-label="Search for a company to follow"
+                aria-label="Search for a company to follow, big or small"
               />
+              <datalist id="company-suggestions"></datalist>
               <button type="submit" class="btn primary">Follow</button>
             </form>
+            <p class="subsection-hint">Any company name works, including small startups &mdash; the list above is just a few suggestions to get you started.</p>
             <div id="followed-companies-list" class="followed-companies-list"></div>
           </section>
 
           <!-- NEWS SUBSECTION -->
           <section class="companies-subsection" aria-labelledby="news-heading">
             <h2 id="news-heading">News</h2>
-            <p class="subsection-desc">Quick links to the latest news for the companies you follow.</p>
+            <p class="subsection-desc">For each company you follow: a link to its own news, plus links for its direct competitors. Add competitors we don't already know about.</p>
             <div id="companies-news-list" class="companies-news-list"></div>
           </section>
         </div>

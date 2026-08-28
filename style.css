@@ -449,7 +449,13 @@ body {
 .follow-form {
   display: flex;
   gap: 10px;
-  margin-bottom: 18px;
+  margin-bottom: 10px;
+}
+
+.subsection-hint {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin: 0 0 14px;
 }
 
 .company-search-input {
@@ -510,34 +516,140 @@ body {
 .companies-news-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
 }
 
-.company-news-item {
+.company-news-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.company-news-main {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 13px 16px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  text-decoration: none;
-  color: var(--text);
-  transition: border-color 0.15s ease, background 0.15s ease;
-}
-
-.company-news-item:hover {
-  border-color: var(--accent);
-  background: var(--tag-bg);
+  gap: 12px;
 }
 
 .company-news-name {
-  font-weight: 600;
+  font-weight: 700;
 }
 
-.company-news-link {
+.news-link-arrow {
+  font-size: 0.82em;
+}
+
+a.company-news-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   color: var(--accent);
   font-size: 0.88rem;
   font-weight: 600;
+  text-decoration: none;
+}
+
+a.company-news-link:hover {
+  text-decoration: underline;
+}
+
+.company-competitors {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.competitors-label {
+  display: block;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 8px;
+}
+
+.competitors-empty {
+  color: var(--text-muted);
+  font-size: 0.86rem;
+  font-style: italic;
+  margin: 0 0 10px;
+}
+
+.competitor-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.competitor-chip-wrap {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--tag-bg);
+  border-radius: 999px;
+  padding: 6px 6px 6px 12px;
+}
+
+a.competitor-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--tag-text);
+  font-size: 0.86rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+a.competitor-chip:hover {
+  text-decoration: underline;
+}
+
+.competitor-chip-remove {
+  border: none;
+  background: none;
+  color: var(--tag-text);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 50%;
+  opacity: 0.7;
+}
+
+.competitor-chip-remove:hover {
+  opacity: 1;
+  background: rgba(47, 95, 239, 0.12);
+}
+
+.add-competitor-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.add-competitor-input {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.86rem;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--surface);
+}
+
+.add-competitor-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.add-competitor-form .link-btn {
+  flex-shrink: 0;
+  margin-bottom: 0;
+  white-space: nowrap;
 }
 
 .companies-empty {
@@ -550,5 +662,6 @@ body {
   .card { padding: 20px; }
   .results-summary { flex-direction: column; }
   .follow-form { flex-direction: column; }
-  .company-news-item { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .company-news-main { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .add-competitor-form { flex-direction: column; align-items: stretch; }
 }
