@@ -13,12 +13,29 @@ Numerical Reasoning quiz described below.
 
 Companies has two subsections: **Following**, where you search for and
 follow companies you're interested in — big or small, e.g. Google, Meta,
-Feedr, Rogo — and **News**, which for each followed company shows a link to
-its own news plus a link for each of its direct competitors (e.g. following
-Sunsave surfaces Project Solar UK as a competitor). A handful of well-known
-competitor relationships are prefilled automatically; for anything else you
-can add competitors by hand. Followed companies and their competitors are
-saved in the browser's local storage.
+Feedr, Rogo — and **News**, which for each followed company splits into:
+
+- **Company news** — articles about the company itself.
+- **Industry news** — articles about broader trends you tag as relevant
+  (e.g. "office attendance trends" for a B2B workplace-food company), plus
+  articles about its direct competitors.
+
+Competitor relationships are **never guessed** — a company only shows a
+competitor if it's in the small `KNOWN_COMPETITORS` map in `companies.js`
+(currently just Sunsave ↔ Project Solar UK) or you've added it by hand from
+the News subsection. Industry topics work the same way: add whatever's
+relevant with "+ Add" under a company's Industry news.
+
+Followed companies, their competitors, and their industry topics are saved
+in the browser's local storage.
+
+### Real article links (optional)
+
+By default, News links fall back to a plain "Search for news" link. To get
+actual article links (title, source, real publisher URL) instead of a
+search page, deploy the small free news proxy in `worker/` (a Cloudflare
+Worker, no API key or fees — see `worker/README.md`) and set its URL as
+`NEWS_API_ENDPOINT` at the top of `companies.js`.
 
 If you'd rather serve it locally:
 
@@ -48,7 +65,10 @@ python3 -m http.server 8000
 - `index.html` — main menu (Companies / Networking / Prep)
 - `menu.css` — shared menu styling (main menu and submenus)
 - `companies.html` — companies section (Following + News subsections)
-- `companies.js` — follow/unfollow logic and localStorage persistence
+- `companies.js` — follow/unfollow, competitors, industry topics, and
+  real-article fetching (with search-link fallback)
+- `worker/news-proxy.js` — optional free Cloudflare Worker that fetches real
+  article links for the News subsection (see `worker/README.md`)
 - `networking.html` — networking section (placeholder)
 - `prep.html` — prep submenu (currently just Numerical Reasoning Test)
 - `numerical-reasoning.html` — quiz page structure and screens (start / quiz / results)
