@@ -8,8 +8,8 @@ BCG online test, SHL numerical reasoning, etc.).
 
 No build step or server required — just open `index.html` in a browser. It
 opens on a main menu with three sections: **Companies**, **Networking**, and
-**Prep**. Prep opens its own submenu of practice tools, currently just the
-Numerical Reasoning quiz described below.
+**Prep**. Prep opens its own submenu of practice tools: the Numerical
+Reasoning quiz and the Data Analysis quiz, both described below.
 
 Companies has two subsections: **Following**, where you search for and
 follow companies you're interested in — big or small, e.g. Google, Meta,
@@ -60,6 +60,26 @@ python3 -m http.server 8000
 - Answers lock in once selected (no changing your mind, like the real thing),
   and a full review with worked explanations is shown at the end.
 
+## What the Data Analysis quiz does
+
+- Generates **15 multiple-choice questions** per attempt, each built around a
+  freshly randomised bar chart, line chart, pie chart, stacked bar chart, or
+  data table — the kind of chart-reading and data-interpretation questions
+  used in consulting numerical reasoning tests (Bain SOVA, BCG online test).
+- Covers fifteen question types, one per attempt: reading a value off a bar
+  or line chart, differences and percentage changes between bars, CAGR and
+  trend forecasting on a line chart, comparing two line series, reading and
+  converting a pie chart share, a stacked bar chart's share of total,
+  table averages, growth rates, ratios/margins, a weighted average, and
+  ranking categories by value.
+- Shows a **countdown timer** against a **recommended completion time of
+  18:00** (about 72 seconds per question). The test auto-submits if time
+  runs out.
+- Same presentation as the Numerical Reasoning Trainer: answers lock in once
+  selected, a full review (with the original chart or table alongside each
+  worked explanation) is shown at the end, and a line graph tracks your score
+  out of 15 across every attempt on this device.
+
 ## Files
 
 - `index.html` — main menu (Companies / Networking / Prep)
@@ -70,7 +90,9 @@ python3 -m http.server 8000
 - `worker/news-proxy.js` — optional free Cloudflare Worker that fetches real
   article links for the News subsection (see `worker/README.md`)
 - `networking.html` — networking section (placeholder)
-- `prep.html` — prep submenu (currently just Numerical Reasoning Test)
+- `prep.html` — prep submenu (Numerical Reasoning Test, Data Analysis)
 - `numerical-reasoning.html` — quiz page structure and screens (start / quiz / results)
-- `style.css` — quiz styling
-- `script.js` — question generators, quiz engine, timer, and DOM logic
+- `script.js` — numerical reasoning question generators, quiz engine, timer, and DOM logic
+- `data-analysis.html` — data analysis quiz page structure and screens (start / quiz / results)
+- `data-analysis.js` — chart/table renderers, question generators, quiz engine, timer, and DOM logic
+- `style.css` — shared quiz styling (both trainers) plus chart and data-table styles
