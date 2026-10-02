@@ -4,26 +4,114 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Job Search Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" />
   <link rel="stylesheet" href="menu.css" />
 </head>
 <body>
   <div class="menu-app">
-    <header class="menu-header">
-      <h1>Job Search Hub</h1>
-      <p class="menu-subtitle">Pick where you want to focus.</p>
-    </header>
+    <div class="hub-wrap" id="hub-wrap">
+      <div class="hub-top">
+        <aside class="recent-data box-recent rise" data-box="recent" style="--rise-x: -32px; --rise-y: 18px; animation-delay: 0.05s;">
+          <h2>Welcome back</h2>
+          <p class="recent-intro">What would you like to tackle today?</p>
+          <div class="recent-rows">
+            <div class="recent-row">
+              <span class="recent-label">Networking</span>
+              <p class="recent-value recent-empty" id="recent-networking">No conversations logged yet</p>
+            </div>
+            <div class="recent-row">
+              <span class="recent-label">Company news</span>
+              <p class="recent-value recent-empty" id="recent-companies">Follow companies to see updates here</p>
+            </div>
+            <div class="recent-row">
+              <span class="recent-label">Prep high score</span>
+              <p class="recent-value recent-empty" id="recent-prep-score">No attempts yet</p>
+            </div>
+          </div>
+        </aside>
 
-    <main class="menu-grid">
-      <a href="companies.html" class="menu-box">
-        <span class="menu-box-title">Companies</span>
+        <a class="prep-hero box-prep rise" data-box="prep" href="prep.html" style="--rise-x: 32px; --rise-y: 18px; animation-delay: 0.12s;">
+          <span class="prep-hero-title">Prep</span>
+          <span class="prep-hero-hint">Sharpen your numerical reasoning before test day.</span>
+        </a>
+      </div>
+
+      <a class="menu-row box-companies rise" data-box="companies" href="companies.html" style="--rise-y: 26px; animation-delay: 0.2s;">
+        <span class="menu-row-text">
+          <span class="menu-row-title">Companies</span>
+          <span class="menu-row-desc">Track applications, statuses, and contacts in one place.</span>
+        </span>
+        <span class="menu-row-arrow" aria-hidden="true">&rarr;</span>
       </a>
-      <a href="networking.html" class="menu-box">
-        <span class="menu-box-title">Networking</span>
+
+      <a class="menu-row box-networking rise" data-box="networking" href="networking.html" style="--rise-y: 26px; animation-delay: 0.26s;">
+        <span class="menu-row-text">
+          <span class="menu-row-title">Networking</span>
+          <span class="menu-row-desc">Log conversations, intros, and follow-ups as you build your network.</span>
+        </span>
+        <span class="menu-row-arrow" aria-hidden="true">&rarr;</span>
       </a>
-      <a href="prep.html" class="menu-box">
-        <span class="menu-box-title">Prep</span>
-      </a>
-    </main>
+    </div>
   </div>
+
+  <script>
+    "use strict";
+
+    // Real "recent data" pulled from what the other pages already save
+    // locally — not placeholder numbers.
+    (function renderRecentData() {
+      try {
+        const raw = localStorage.getItem("numericalReasoningTrainerHistory");
+        const history = raw ? JSON.parse(raw) : [];
+        const scoreEl = document.getElementById("recent-prep-score");
+        if (Array.isArray(history) && history.length > 0) {
+          const best = history.reduce((max, h) => Math.max(max, h.score || 0), 0);
+          scoreEl.textContent = `${best} / 10`;
+          scoreEl.classList.remove("recent-empty");
+          scoreEl.classList.add("mono");
+        }
+      } catch (e) {
+        // localStorage unavailable — leave the empty-state copy in place.
+      }
+
+      try {
+        const raw = localStorage.getItem("jobSearchFollowedCompanies");
+        const companies = raw ? JSON.parse(raw) : [];
+        const companiesEl = document.getElementById("recent-companies");
+        if (Array.isArray(companies) && companies.length > 0) {
+          const noun = companies.length === 1 ? "company" : "companies";
+          companiesEl.textContent = `Following ${companies.length} ${noun}`;
+          companiesEl.classList.remove("recent-empty");
+        }
+      } catch (e) {
+        // localStorage unavailable — leave the empty-state copy in place.
+      }
+    })();
+
+    // Hover accordion — the box under the cursor (or keyboard focus) grows
+    // slightly; the other home-screen boxes shrink to match.
+    (function wireHoverAccordion() {
+      const hubWrap = document.getElementById("hub-wrap");
+      if (!hubWrap) return;
+
+      hubWrap.querySelectorAll("[data-box]").forEach((box) => {
+        const activate = () => { hubWrap.dataset.hover = box.dataset.box; };
+        const deactivate = () => { delete hubWrap.dataset.hover; };
+        box.addEventListener("mouseenter", activate);
+        box.addEventListener("mouseleave", deactivate);
+        box.addEventListener("focus", activate);
+        box.addEventListener("blur", deactivate);
+      });
+    })();
+
+    // A finished "rise" entrance animation keeps its fill-forward transform
+    // in the animation cascade layer, which would otherwise permanently
+    // block the hover-accordion's transform: scale() on the same element.
+    // Drop the class once the one-shot entrance animation ends.
+    document.querySelectorAll(".rise").forEach((el) => {
+      el.addEventListener("animationend", () => el.classList.remove("rise"), { once: true });
+    });
+  </script>
 </body>
 </html>

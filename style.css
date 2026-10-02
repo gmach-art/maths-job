@@ -1,23 +1,26 @@
 :root {
-  --bg: #f4f5f7;
-  --surface: #ffffff;
-  --text: #1c1f26;
-  --text-muted: #5b6270;
-  --border: #e1e4e9;
-  --accent: #2f5fef;
-  --accent-hover: #2448c4;
-  --correct: #1e8e5a;
-  --incorrect: #d1453b;
-  --tag-bg: #eaf0ff;
-  --tag-text: #2f5fef;
-  --timer-warn: #d1453b;
+  --bg: #5b6b46;
+  --surface: #2f3b26;
+  --text: #f4f1e6;
+  --text-muted: #d3ddc0;
+  --border: #4a5c3c;
+  --accent: #a9d97c;
+  --accent-fill: #4f7a38;
+  --accent-hover: #3f6329;
+  --correct: #a9d97c;
+  --correct-bg: #3a4f2f;
+  --incorrect: #e0916f;
+  --incorrect-bg: #4a3226;
+  --tag-bg: #3c4f30;
+  --tag-text: #a9d97c;
+  --timer-warn: #e0916f;
 }
 
 * { box-sizing: border-box; }
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: "Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
@@ -27,6 +30,10 @@ body {
   max-width: 720px;
   margin: 0 auto;
   padding: 32px 20px 64px;
+}
+
+h1, h2, h3 {
+  font-weight: 800;
 }
 
 .app-header {
@@ -61,7 +68,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 28px;
-  box-shadow: 0 1px 3px rgba(20, 20, 30, 0.05);
+  box-shadow: 0 1px 3px rgba(8, 12, 6, 0.35);
 }
 
 .info-list {
@@ -87,8 +94,8 @@ body {
 }
 
 .btn.primary {
-  background: var(--accent);
-  color: #fff;
+  background: var(--accent-fill);
+  color: var(--text);
 }
 
 .btn.primary:hover:not(:disabled) {
@@ -150,7 +157,7 @@ body {
 }
 
 .timer.warn {
-  background: #fdeceb;
+  background: var(--incorrect-bg);
   color: var(--timer-warn);
 }
 
@@ -189,14 +196,14 @@ body {
 
 .option.correct {
   border-color: var(--correct);
-  background: #eafaf2;
+  background: var(--correct-bg);
   color: var(--correct);
   font-weight: 600;
 }
 
 .option.incorrect {
   border-color: var(--incorrect);
-  background: #fdeceb;
+  background: var(--incorrect-bg);
   color: var(--incorrect);
   font-weight: 600;
 }
@@ -315,7 +322,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 6px 10px;
-  box-shadow: 0 6px 16px rgba(20, 20, 30, 0.12);
+  box-shadow: 0 6px 16px rgba(5, 8, 4, 0.4);
   white-space: nowrap;
 }
 
@@ -510,7 +517,7 @@ body {
 
 .company-chip-remove:hover {
   opacity: 1;
-  background: rgba(47, 95, 239, 0.12);
+  background: rgba(169, 217, 124, 0.18);
 }
 
 .companies-news-list {
@@ -643,7 +650,7 @@ a.news-search-fallback:hover {
 
 .competitor-chip-remove:hover {
   opacity: 1;
-  background: rgba(47, 95, 239, 0.12);
+  background: rgba(169, 217, 124, 0.18);
 }
 
 .add-competitor-form {
