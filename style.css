@@ -14,6 +14,9 @@
   --tag-bg: #3c4f30;
   --tag-text: #a9d97c;
   --timer-warn: #e0916f;
+  --correct-solid: #4f7a38;
+  --incorrect-solid: #a8512e;
+  --option-text: #ffffff;
   --series-1: #2a78d6;
   --series-2: #eb6834;
   --series-3: #1baf7a;
@@ -72,7 +75,7 @@ h1, h2, h3 {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 14px;
-  padding: 28px;
+  padding: 34px;
   box-shadow: 0 1px 3px rgba(8, 12, 6, 0.35);
 }
 
@@ -167,26 +170,28 @@ h1, h2, h3 {
 }
 
 .prompt {
-  font-size: 1.08rem;
-  line-height: 1.55;
-  margin: 0 0 20px;
+  font-size: 1.14rem;
+  line-height: 1.6;
+  margin: 0 0 22px;
   white-space: pre-line;
 }
 
 .options {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
 }
 
 .option {
   text-align: left;
-  padding: 13px 16px;
+  padding: 20px 22px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--surface);
+  color: var(--option-text);
   cursor: pointer;
-  font-size: 0.98rem;
+  font-size: 1.08rem;
+  font-weight: 500;
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 
@@ -197,20 +202,21 @@ h1, h2, h3 {
 .option.selected {
   border-color: var(--accent);
   background: var(--tag-bg);
+  color: var(--option-text);
 }
 
 .option.correct {
-  border-color: var(--correct);
-  background: var(--correct-bg);
-  color: var(--correct);
-  font-weight: 600;
+  border-color: var(--correct-solid);
+  background: var(--correct-solid);
+  color: var(--option-text);
+  font-weight: 700;
 }
 
 .option.incorrect {
-  border-color: var(--incorrect);
-  background: var(--incorrect-bg);
-  color: var(--incorrect);
-  font-weight: 600;
+  border-color: var(--incorrect-solid);
+  background: var(--incorrect-solid);
+  color: var(--option-text);
+  font-weight: 700;
 }
 
 .option:disabled {

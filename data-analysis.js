@@ -2,6 +2,7 @@
 
 const TARGET_SECONDS = 18 * 60; // recommended completion time
 const TOTAL_QUESTIONS = 15;
+const CLOSE_READING_COUNT = 4;
 const HISTORY_KEY = "dataAnalysisTrainerHistory";
 const HISTORY_LIMIT = 30;
 
@@ -25,6 +26,10 @@ function shuffleInPlace(arr) {
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
+}
+
+function sampleGenerators(pool, count) {
+  return shuffleInPlace([...pool]).slice(0, count);
 }
 
 /* ---------- attempt history (persisted locally per browser) ---------- */
@@ -87,7 +92,7 @@ function buildQuestion(category, prompt, correctValue, rawDistractors, formatFn,
   // Pad out if we ended up with fewer than 4 unique numeric options (rare edge cases).
   let jitter = 1;
   while (options.length < 4 && typeof correctValue === "number") {
-    const padded = correctValue + jitter * (correctValue === 0 ? 1 : Math.sign(correctValue) || 1) * (1 + jitter);
+    const padded = correctValue + jitter * (correctValue === 0 ? 1 : Math.sign(correctValue) || 1);
     const text = formatFn(padded);
     if (!seen.has(text)) {
       seen.add(text);
@@ -507,7 +512,7 @@ function genBarReadValue() {
   const prompt =
     `The chart shows quarterly revenue ($m) for a retail chain in FY24. What was revenue in ${categories[idx]}?`;
 
-  const distractors = [...values.filter((_, i) => i !== idx), correct + 10, correct - 10];
+  const distractors = [...values.filter((_, i) => i !== idx), correct + 5, correct - 5];
 
   const q = buildQuestion(
     "Bar chart: reading a value",
@@ -543,7 +548,7 @@ function genBarDifference() {
     `The chart shows annual sales ($000s) by region. By how much did ${regions[maxI]} sales exceed ` +
     `${regions[minI]} sales?`;
 
-  const distractors = [values[maxI] + values[minI], Math.round(diff * 1.3), Math.round(diff * 0.6), diff + 20];
+  const distractors = [values[maxI] + values[minI], Math.round(diff * 1.15), Math.round(diff * 0.85), diff + 10];
 
   const q = buildQuestion(
     "Bar chart: difference between categories",
@@ -585,8 +590,8 @@ function genBarPercentChange() {
   const distractors = [
     round1(-pctChange),
     round1(((curr - prev) / curr) * 100),
-    round1(pctChange + 5),
-    round1(pctChange - 5),
+    round1(pctChange + 3),
+    round1(pctChange - 3),
   ];
 
   const q = buildQuestion(
@@ -621,7 +626,7 @@ function genLineTrendRead() {
     `The chart shows monthly active users (000s) for an app over H1. How many active users (000s) were ` +
     `there in ${months[idx]}?`;
 
-  const distractors = [...values.filter((_, i) => i !== idx), correct + 10, correct - 10];
+  const distractors = [...values.filter((_, i) => i !== idx), correct + 5, correct - 5];
 
   const q = buildQuestion(
     "Line chart: reading a value",
@@ -655,7 +660,7 @@ function genLineCAGR() {
 
   const totalGrowthPct = round1((values[values.length - 1] / values[0] - 1) * 100);
   const avgAnnualNaive = Math.round(totalGrowthPct / (years.length - 1));
-  const distractors = [avgAnnualNaive, cagrPct + 5, Math.max(cagrPct - 5, 1), Math.round(totalGrowthPct)];
+  const distractors = [avgAnnualNaive, cagrPct + 3, Math.max(cagrPct - 3, 1), Math.round(totalGrowthPct)];
 
   const q = buildQuestion(
     "Line chart: CAGR",
@@ -738,7 +743,7 @@ function genPieShare() {
 
   const prompt = `The chart shows market share by company in the industry. What is ${companies[idx]}'s market share?`;
 
-  const distractors = [...shares.filter((_, i) => i !== idx), correct + 5, Math.max(correct - 5, 1)];
+  const distractors = [...shares.filter((_, i) => i !== idx), correct + 3, Math.max(correct - 3, 1)];
 
   const q = buildQuestion(
     "Pie chart: reading a share",
@@ -778,10 +783,10 @@ function genPieToValue() {
 
   const otherIdx = (idx + 1) % segments.length;
   const distractors = [
-    Math.round((shares[idx] / 100) * totalMarket * 1.5),
+    Math.round((shares[idx] / 100) * totalMarket * 1.2),
     Math.round((shares[otherIdx] / 100) * totalMarket),
     Math.round(totalMarket / segments.length),
-    correct + 20,
+    correct + 10,
   ];
 
   const q = buildQuestion(
@@ -819,9 +824,9 @@ function genStackedBar() {
 
   const distractors = [
     round1(100 - pct),
-    round1(pct + 10),
-    round1(Math.max(pct - 10, 1)),
-    round1((values[pIdx][yIdx] / (total - values[pIdx][yIdx])) * 100),
+    round1(pct + 6),
+    round1(Math.max(pct - 6, 1)),
+    round1(Math.min(pct + 14, 97)),
   ];
 
   const q = buildQuestion(
@@ -857,7 +862,7 @@ function genTableAverage() {
     `The table shows quarterly sales ($000s) by store. What was ${stores[idx]}'s average quarterly sales ` +
     `across the year, to 1 decimal place?`;
 
-  const distractors = [round1(Math.max(...rowValues)), round1(Math.min(...rowValues)), round1(avg + 30), round1(Math.max(avg - 30, 1))];
+  const distractors = [round1(Math.max(...rowValues)), round1(Math.min(...rowValues)), round1(avg + 15), round1(Math.max(avg - 15, 1))];
 
   const q = buildQuestion(
     "Data table: average",
@@ -892,8 +897,8 @@ function genTableGrowthRate() {
   const distractors = [
     round1(-growth),
     round1(((thisYear[idx] - lastYear[idx]) / thisYear[idx]) * 100),
-    round1(growth + 8),
-    round1(growth - 8),
+    round1(growth + 5),
+    round1(growth - 5),
   ];
 
   const q = buildQuestion(
@@ -928,9 +933,9 @@ function genTableRatio() {
 
   const distractors = [
     round1((profit[idx] / (revenue[idx] - profit[idx])) * 100),
-    round1(margin + 8),
-    round1(Math.max(margin - 8, 1)),
-    round1(revenue[idx] / profit[idx]),
+    round1(100 - margin),
+    round1(margin + 5),
+    round1(Math.max(margin - 5, 1)),
   ];
 
   const q = buildQuestion(
@@ -969,7 +974,7 @@ function genTableWeightedAvg() {
     `overall profit margin, weighted by revenue share, to 1 decimal place?`;
 
   const simpleAvg = round1(margins.reduce((a, b) => a + b, 0) / margins.length);
-  const distractors = [simpleAvg, round1(weighted + 3), round1(Math.max(weighted - 3, 1)), Math.max(...margins)];
+  const distractors = [simpleAvg, round1(weighted + 2), round1(Math.max(weighted - 2, 1)), Math.max(...margins)];
 
   const q = buildQuestion(
     "Data table: weighted average",
@@ -998,20 +1003,23 @@ function genBarRanking() {
 
   const sortedIdx = growth.map((_, i) => i).sort((a, b) => growth[b] - growth[a]);
   const secondIdx = sortedIdx[1];
+  const headcount = randInt(200, 900);
+  const foundedYear = randInt(1998, 2019);
 
-  const prompt = `The chart shows year-on-year revenue growth (%) by region. Which region had the second-highest ` +
-    `growth rate?`;
+  const prompt =
+    `The chart shows year-on-year revenue growth (%) by region. The company, founded in ${foundedYear}, now ` +
+    `employs around ${headcount} people across all regions. Which region had the second-highest growth rate?`;
 
   const distractors = regions.filter((_, i) => i !== secondIdx);
 
   const q = buildQuestion(
-    "Bar chart: ranking",
+    "Reading carefully: ranking",
     prompt,
     regions[secondIdx],
     distractors,
     (v) => v,
     `Ranked highest to lowest: ${sortedIdx.map((i) => `${regions[i]} (${growth[i] > 0 ? "+" : ""}${growth[i]}%)`).join(", ")}. ` +
-      `The second-highest is ${regions[secondIdx]}.`
+      `The headcount and founding year aren't relevant to the ranking. The second-highest is ${regions[secondIdx]}.`
   );
 
   return withChart(q, (container) =>
@@ -1040,9 +1048,9 @@ function genLineForecast() {
 
   const distractors = [
     lastVal + (lastVal - values[values.length - 2]),
-    Math.round(lastVal * 1.5),
-    Math.round(forecast * 1.1),
-    Math.round(forecast * 0.9),
+    Math.round(lastVal * 1.15),
+    Math.round(forecast * 1.08),
+    Math.round(forecast * 0.92),
   ];
 
   const q = buildQuestion(
@@ -1065,7 +1073,125 @@ function genLineForecast() {
   );
 }
 
-const GENERATORS = [
+/* ---------- question generators (close reading) ---------- */
+/* These require catching a detail in the chart or table — a one-off item to
+   adjust for, a time period to sum correctly, or a negation — not just
+   reading off the obvious number. */
+
+function genChartExcludingOneOff() {
+  const quarters = ["Q1", "Q2", "Q3", "Q4"];
+  const values = quarters.map(() => randInt(20, 80) * 10);
+  const idx = randInt(0, quarters.length - 1);
+  const oneOff = randInt(10, 50) * 10;
+  const isGain = choice([true, false]);
+  const underlying = isGain ? values[idx] - oneOff : values[idx] + oneOff;
+  const itemWord = isGain ? "one-off gain from a property sale" : "one-off restructuring charge";
+
+  const prompt =
+    `The chart shows quarterly net profit ($000s). ${quarters[idx]}'s figure includes a $${oneOff}k ` +
+    `${itemWord}. What was ${quarters[idx]}'s underlying profit, excluding this one-off item?`;
+
+  const distractors = [
+    values[idx],
+    isGain ? values[idx] + oneOff : values[idx] - oneOff,
+    underlying + 20,
+    Math.max(underlying - 20, 1),
+  ];
+
+  const q = buildQuestion(
+    "Reading carefully: one-off items",
+    prompt,
+    underlying,
+    distractors,
+    (v) => `$${Math.round(v)}k`,
+    `${quarters[idx]}'s reported profit was $${values[idx]}k, which includes a $${oneOff}k ${itemWord}. ` +
+      `Underlying profit = $${values[idx]}k ${isGain ? "−" : "+"} $${oneOff}k = $${underlying}k.`
+  );
+
+  return withChart(q, (container) =>
+    renderBarChart(container, {
+      title: "Quarterly net profit ($000s)",
+      categories: quarters,
+      values,
+      valueFormat: (v) => `$${Math.round(v)}k`,
+    })
+  );
+}
+
+function genChartUnitTrap() {
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+  const values = months.map(() => randInt(15, 60) * 10);
+  const isQ1 = choice([true, false]);
+  const quarterMonths = isQ1 ? [0, 1, 2] : [3, 4, 5];
+  const quarterLabel = isQ1 ? "Q1 (Jan–Mar)" : "Q2 (Apr–Jun)";
+  const total = quarterMonths.reduce((sum, i) => sum + values[i], 0);
+
+  const prompt = `The table shows monthly revenue ($000s). What was total revenue for ${quarterLabel}?`;
+
+  const distractors = [
+    values[quarterMonths[0]],
+    Math.round(total / 3),
+    total + values[isQ1 ? 3 : 0],
+    Math.max(total - values[quarterMonths[1]], 1),
+  ];
+
+  const q = buildQuestion(
+    "Reading carefully: summing the right months",
+    prompt,
+    total,
+    distractors,
+    (v) => `$${Math.round(v)}k`,
+    `${quarterLabel} total = ${quarterMonths.map((i) => `$${values[i]}k`).join(" + ")} = $${total}k.`
+  );
+
+  return withChart(q, (container) =>
+    renderDataTable(container, {
+      title: "Monthly revenue ($000s)",
+      columns: ["Month", "Revenue"],
+      rows: months.map((m, i) => [m, `$${values[i]}k`]),
+    })
+  );
+}
+
+function genPieNotAboveThreshold() {
+  const companies = ["Alpha Co", "Beta Inc", "Gamma Ltd", "Delta Group", "Epsilon Corp"];
+  let shares;
+  do {
+    const raw = companies.map(() => randInt(5, 40));
+    const sum = raw.reduce((a, b) => a + b, 0);
+    shares = raw.map((v) => Math.round((v / sum) * 100));
+    shares[0] += 100 - shares.reduce((a, b) => a + b, 0);
+  } while (shares.some((s) => s <= 0));
+
+  const threshold = choice([15, 20, 25]);
+  const belowIdx = shares.map((s, i) => i).filter((i) => shares[i] < threshold);
+  if (belowIdx.length !== 1) return genPieNotAboveThreshold();
+  const answerIdx = belowIdx[0];
+
+  const prompt = `The chart shows market share by company. Which company's market share is NOT at least ${threshold}%?`;
+
+  const distractors = companies.filter((_, i) => i !== answerIdx);
+
+  const q = buildQuestion(
+    "Reading carefully: which is NOT",
+    prompt,
+    companies[answerIdx],
+    distractors,
+    (v) => v,
+    `Shares: ${companies.map((c, i) => `${c} ${shares[i]}%`).join(", ")}. Only ${companies[answerIdx]} falls ` +
+      `below ${threshold}%.`
+  );
+
+  return withChart(q, (container) =>
+    renderPieChart(container, {
+      title: "Market share by company",
+      segments: companies.map((label, i) => ({ label, value: shares[i] })),
+      sliceLabelFormat: (value) => `${Math.round(value)}%`,
+    })
+  );
+}
+
+const STANDARD_GENERATORS = [
   genBarReadValue,
   genBarDifference,
   genBarPercentChange,
@@ -1079,14 +1205,25 @@ const GENERATORS = [
   genTableGrowthRate,
   genTableRatio,
   genTableWeightedAvg,
-  genBarRanking,
   genLineForecast,
 ];
 
+const CLOSE_READING_GENERATORS = [
+  genBarRanking,
+  genChartExcludingOneOff,
+  genChartUnitTrap,
+  genPieNotAboveThreshold,
+];
+
 function buildQuestionSet() {
-  // One question per generator, in a shuffled order, so all fifteen chart/table
-  // types required are always covered exactly once per playthrough.
-  return shuffleInPlace(GENERATORS.map((gen) => gen()));
+  // A handful of close-reading questions every attempt (a one-off item to
+  // adjust for, the right months to sum, a negation), plus a random spread
+  // of standard chart/table questions to fill out the rest.
+  const closeReadingPicks = sampleGenerators(CLOSE_READING_GENERATORS, Math.min(CLOSE_READING_COUNT, CLOSE_READING_GENERATORS.length));
+  const standardCount = TOTAL_QUESTIONS - closeReadingPicks.length;
+  const standardPicks = sampleGenerators(STANDARD_GENERATORS, Math.min(standardCount, STANDARD_GENERATORS.length));
+  const questions = [...closeReadingPicks, ...standardPicks].map((gen) => gen());
+  return shuffleInPlace(questions);
 }
 
 /* ---------- quiz state & DOM wiring ---------- */

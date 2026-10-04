@@ -47,16 +47,18 @@ python3 -m http.server 8000
 ## What the Prep quiz does
 
 - Generates **10 multiple-choice word problems** per attempt, with randomised
-  numbers so every playthrough is different.
-- Covers ten topics, one question each, matching what these tests actually ask:
-  algebra, weighted averages, speed/distance with objects travelling toward
-  each other, simultaneous equations, successive percentage changes, ratios,
-  work rate, compound growth, mixtures, and speed/distance catch-up problems.
+  numbers so every playthrough is different: **4 close-reading questions**
+  every time (a negation, a direction-of-adjustment trap, an irrelevant
+  distraction, or a unit mismatch — details that are easy to miss), plus 6
+  more sampled from a pool of word-problem and case/accounting topics
+  (algebra, weighted averages, speed/distance, simultaneous equations,
+  percentages, ratios, work rate, compound growth, mixtures, gross margin,
+  break-even analysis, contribution margin, and payback period).
 - No charts, graphs, or diagrams — every question is a pure word problem, as
   requested.
 - Shows a **countdown timer** against a **recommended completion time of
-  15:00** (roughly 90 seconds per question, in line with real assessment
-  centre pacing). The test auto-submits if time runs out.
+  11:00** (about 66 seconds per question — a tighter pace than a typical
+  assessment centre). The test auto-submits if time runs out.
 - Answers lock in once selected (no changing your mind, like the real thing),
   and a full review with worked explanations is shown at the end.
 
@@ -66,12 +68,14 @@ python3 -m http.server 8000
   freshly randomised bar chart, line chart, pie chart, stacked bar chart, or
   data table — the kind of chart-reading and data-interpretation questions
   used in consulting numerical reasoning tests (Bain SOVA, BCG online test).
-- Covers fifteen question types, one per attempt: reading a value off a bar
-  or line chart, differences and percentage changes between bars, CAGR and
-  trend forecasting on a line chart, comparing two line series, reading and
-  converting a pie chart share, a stacked bar chart's share of total,
-  table averages, growth rates, ratios/margins, a weighted average, and
-  ranking categories by value.
+- Covers fifteen question types per attempt: **4 close-reading questions**
+  every time (a one-off item to adjust for, the right months to sum, a
+  ranking question buried in a distracting sentence, or a "which is NOT"
+  negation), plus 11 more sampled from reading a value off a bar or line
+  chart, differences and percentage changes between bars, CAGR and trend
+  forecasting on a line chart, comparing two line series, reading and
+  converting a pie chart share, a stacked bar chart's share of total, table
+  averages, growth rates, ratios/margins, and a weighted average.
 - Shows a **countdown timer** against a **recommended completion time of
   18:00** (about 72 seconds per question). The test auto-submits if time
   runs out.
