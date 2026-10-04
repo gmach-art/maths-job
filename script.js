@@ -1,7 +1,8 @@
 "use strict";
 
-const TARGET_SECONDS = 15 * 60; // recommended completion time
+const TARGET_SECONDS = 11 * 60; // recommended completion time
 const TOTAL_QUESTIONS = 10;
+const CLOSE_READING_COUNT = 4;
 const HISTORY_KEY = "numericalReasoningTrainerHistory";
 const HISTORY_LIMIT = 30;
 
@@ -25,6 +26,18 @@ function round1(n) {
 
 function round2(n) {
   return Math.round(n * 100) / 100;
+}
+
+function shuffleInPlace(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = randInt(0, i);
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function sampleGenerators(pool, count) {
+  return shuffleInPlace([...pool]).slice(0, count);
 }
 
 /* ---------- attempt history (persisted locally per browser) ---------- */
@@ -63,9 +76,10 @@ function clearHistory() {
 }
 
 /**
- * Builds a shuffled multiple-choice question from a correct numeric value
- * and a list of plausible wrong numeric values. Distractors that would
- * format identically to the correct answer (or to each other) are dropped.
+ * Builds a shuffled multiple-choice question from a correct value (number or,
+ * for "which of these" questions, a string) and a list of plausible wrong
+ * values. Distractors that would format identically to the correct answer
+ * (or to each other) are dropped.
  */
 function buildQuestion(category, prompt, correctValue, rawDistractors, formatFn, explanation) {
   const seen = new Set();
@@ -83,10 +97,10 @@ function buildQuestion(category, prompt, correctValue, rawDistractors, formatFn,
     options.push({ text, isCorrect: false });
   }
 
-  // Pad out if we ended up with fewer than 4 unique options (rare edge cases).
+  // Pad out if we ended up with fewer than 4 unique numeric options (rare edge cases).
   let jitter = 1;
-  while (options.length < 4) {
-    const padded = correctValue + jitter * (correctValue === 0 ? 1 : Math.sign(correctValue) || 1) * (1 + jitter);
+  while (options.length < 4 && typeof correctValue === "number") {
+    const padded = correctValue + jitter * (correctValue === 0 ? 1 : Math.sign(correctValue) || 1);
     const text = formatFn(padded);
     if (!seen.has(text)) {
       seen.add(text);
@@ -96,12 +110,7 @@ function buildQuestion(category, prompt, correctValue, rawDistractors, formatFn,
     if (jitter > 20) break; // safety valve
   }
 
-  // Fisher-Yates shuffle
-  for (let i = options.length - 1; i > 0; i--) {
-    const j = randInt(0, i);
-    [options[i], options[j]] = [options[j], options[i]];
-  }
-
+  shuffleInPlace(options);
   const correctIndex = options.findIndex((o) => o.isCorrect);
 
   return {
@@ -113,7 +122,7 @@ function buildQuestion(category, prompt, correctValue, rawDistractors, formatFn,
   };
 }
 
-/* ---------- question generators ---------- */
+/* ---------- question generators (standard) ---------- */
 /* Every generator is a self-contained word problem with randomised
    numbers, so replaying the test gives a fresh set of questions. */
 
@@ -127,7 +136,7 @@ function genAlgebra() {
     `A recruiter poses a brain-teaser: "Think of a number, multiply it by ${a}, ` +
     `then subtract ${b}. The result is ${c}." What number was the candidate thinking of?`;
 
-  const distractors = [x + a, x - a, Math.round(c / a), x * 2];
+  const distractors = [x + a, x - a, Math.round(c / a), x + 2];
 
   return buildQuestion(
     "Algebra",
@@ -155,7 +164,7 @@ function genWeightedAverage() {
 
   const simpleAvg = round1((s1 + s2) / 2);
   const swapped = round1((n1 * s2 + n2 * s1) / (n1 + n2));
-  const distractors = [simpleAvg, swapped, round1(weighted + 3), round1(weighted - 3)];
+  const distractors = [simpleAvg, swapped, round1(weighted + 2), round1(weighted - 2)];
 
   return buildQuestion(
     "Weighted averages",
@@ -180,12 +189,11 @@ function genOppositeSpeed() {
     `at ${speed2} mph. Assuming both maintain a constant speed, how long after they set off will ` +
     `they meet?`;
 
-  const diff = Math.abs(speed1 - speed2) || speed1;
   const distractors = [
-    round1(distance / diff),
     round1(distance / speed1),
-    round1(time + 0.5),
-    round1(Math.max(time - 0.5, 0.1)),
+    round1(time + 0.3),
+    round1(Math.max(time - 0.3, 0.1)),
+    round1(time * 1.4),
   ];
 
   return buildQuestion(
@@ -216,7 +224,7 @@ function genSimultaneous() {
     childCount,
     Math.round(revenue / priceA),
     Math.round(total / 2),
-    adultCount + 10,
+    adultCount + 5,
   ];
 
   return buildQuestion(
@@ -301,7 +309,7 @@ function genWorkRate() {
     round1((hoursA + hoursB) / 2),
     hoursA + hoursB,
     round1(Math.abs(hoursA - hoursB)),
-    round1(correct + 0.5),
+    round1(correct + 0.3),
   ];
 
   return buildQuestion(
@@ -359,7 +367,7 @@ function genMixture() {
 
   const simpleAvg = round1((concA + concB) / 2);
   const swapped = round1((volA * concB + volB * concA) / (volA + volB));
-  const distractors = [simpleAvg, swapped, round1(resultConc + 2), round1(Math.max(resultConc - 2, 0))];
+  const distractors = [simpleAvg, swapped, round1(resultConc + 1.5), round1(Math.max(resultConc - 1.5, 0))];
 
   return buildQuestion(
     "Mixtures",
@@ -389,7 +397,7 @@ function genCatchUp() {
   const distractors = [
     headStart,
     round1(gap / (speedFast + speedSlow)),
-    round1(timeToCatch + 0.5),
+    round1(timeToCatch + 0.3),
     round1((speedFast * headStart) / closingSpeed),
   ];
 
@@ -405,7 +413,277 @@ function genCatchUp() {
   );
 }
 
-const GENERATORS = [
+function genGrossMargin() {
+  const revenue = randInt(20, 120) * 10;
+  const cogsPct = randInt(40, 75);
+  const cogs = Math.round((revenue * cogsPct) / 100);
+  const grossProfit = revenue - cogs;
+  const margin = round1((grossProfit / revenue) * 100);
+
+  const prompt =
+    `A business reports revenue of $${revenue}k and cost of goods sold (COGS) of $${cogs}k for the ` +
+    `quarter. What is the company's gross margin (gross profit as a percentage of revenue), to 1 ` +
+    `decimal place?`;
+
+  const distractors = [
+    round1((cogs / revenue) * 100),
+    round1((grossProfit / cogs) * 100),
+    round1(margin + 3),
+    round1(Math.max(margin - 3, 1)),
+  ];
+
+  return buildQuestion(
+    "Margins",
+    prompt,
+    margin,
+    distractors,
+    (v) => `${v.toFixed(1)}%`,
+    `Gross profit = $${revenue}k − $${cogs}k = $${grossProfit}k. Gross margin = $${grossProfit}k ÷ ` +
+      `$${revenue}k × 100 = ${margin.toFixed(1)}%.`
+  );
+}
+
+function genBreakeven() {
+  const fixedCosts = randInt(20, 200) * 100;
+  const pricePerUnit = randInt(15, 60);
+  const variableCostPerUnit = randInt(5, pricePerUnit - 5);
+  const contributionPerUnit = pricePerUnit - variableCostPerUnit;
+  const breakevenUnits = Math.ceil(fixedCosts / contributionPerUnit);
+
+  const prompt =
+    `A startup has fixed costs of $${fixedCosts.toLocaleString()} per month. Each unit sells for ` +
+    `$${pricePerUnit} and costs $${variableCostPerUnit} in variable costs to produce. How many units ` +
+    `must it sell per month to break even?`;
+
+  const distractors = [
+    Math.ceil(fixedCosts / pricePerUnit),
+    breakevenUnits + 15,
+    Math.max(breakevenUnits - 15, 1),
+    Math.round(breakevenUnits * 1.25),
+  ];
+
+  return buildQuestion(
+    "Break-even analysis",
+    prompt,
+    breakevenUnits,
+    distractors,
+    (v) => `${Math.round(v).toLocaleString()} units`,
+    `Contribution margin per unit = $${pricePerUnit} − $${variableCostPerUnit} = $${contributionPerUnit}. ` +
+      `Break-even units = fixed costs ÷ contribution per unit = $${fixedCosts.toLocaleString()} ÷ ` +
+      `$${contributionPerUnit} ≈ ${breakevenUnits.toLocaleString()} units.`
+  );
+}
+
+function genContributionMarginRatio() {
+  const pricePerUnit = randInt(20, 100);
+  const variableCostPerUnit = randInt(5, pricePerUnit - 5);
+  const contribution = pricePerUnit - variableCostPerUnit;
+  const ratio = round1((contribution / pricePerUnit) * 100);
+
+  const prompt =
+    `A product sells for $${pricePerUnit} per unit and has a variable cost of $${variableCostPerUnit} ` +
+    `per unit. What is the contribution margin ratio (contribution margin as a percentage of selling ` +
+    `price), to 1 decimal place?`;
+
+  const distractors = [
+    round1((variableCostPerUnit / pricePerUnit) * 100),
+    round1(ratio + 5),
+    round1(Math.max(ratio - 5, 1)),
+    round1(Math.min(ratio + 12, 97)),
+  ];
+
+  return buildQuestion(
+    "Contribution margin",
+    prompt,
+    ratio,
+    distractors,
+    (v) => `${v.toFixed(1)}%`,
+    `Contribution margin per unit = $${pricePerUnit} − $${variableCostPerUnit} = $${contribution}. Ratio ` +
+      `= $${contribution} ÷ $${pricePerUnit} × 100 = ${ratio.toFixed(1)}%.`
+  );
+}
+
+function genPaybackPeriod() {
+  const investment = randInt(50, 400) * 1000;
+  const annualSaving = randInt(10, 80) * 1000;
+  const paybackYears = round1(investment / annualSaving);
+
+  const prompt =
+    `A company invests $${investment.toLocaleString()} in new equipment that is expected to generate ` +
+    `$${annualSaving.toLocaleString()} in additional annual cash flow. What is the payback period, to ` +
+    `1 decimal place?`;
+
+  const distractors = [
+    round1(annualSaving / investment),
+    round1(paybackYears + 0.8),
+    round1(Math.max(paybackYears - 0.8, 0.1)),
+    round1(paybackYears * 1.3),
+  ];
+
+  return buildQuestion(
+    "Payback period",
+    prompt,
+    paybackYears,
+    distractors,
+    (v) => `${v.toFixed(1)} years`,
+    `Payback period = investment ÷ annual cash flow = $${investment.toLocaleString()} ÷ ` +
+      `$${annualSaving.toLocaleString()} = ${paybackYears.toFixed(1)} years.`
+  );
+}
+
+/* ---------- question generators (close reading) ---------- */
+/* These require catching a detail in the wording — a negation, a direction
+   of adjustment, a unit mismatch, or an irrelevant distraction — not just
+   running the obvious calculation. */
+
+function genMarkupVsMargin() {
+  const cost = randInt(20, 80) * 5;
+  const markupPct = choice([20, 25, 30, 40, 50, 60]);
+  const sellingPrice = Math.round(cost * (1 + markupPct / 100));
+  const grossProfit = sellingPrice - cost;
+  const marginPct = round1((grossProfit / sellingPrice) * 100);
+
+  const prompt =
+    `A retailer buys a product for $${cost} and applies a ${markupPct}% markup on cost to set the ` +
+    `selling price. What is the resulting gross margin, expressed as a percentage of the selling ` +
+    `price, to 1 decimal place?`;
+
+  const distractors = [markupPct, round1(markupPct - 5), round1(marginPct + 4), round1(Math.max(marginPct - 4, 1))];
+
+  return buildQuestion(
+    "Reading carefully: margin vs. markup",
+    prompt,
+    marginPct,
+    distractors,
+    (v) => `${v.toFixed(1)}%`,
+    `Selling price = $${cost} × (1 + ${markupPct}/100) = $${sellingPrice}. Gross profit = $${sellingPrice} − ` +
+      `$${cost} = $${grossProfit}. Margin = $${grossProfit} ÷ $${sellingPrice} × 100 = ${marginPct.toFixed(1)}% ` +
+      `— lower than the ${markupPct}% markup, because margin is measured against selling price, not cost.`
+  );
+}
+
+function genReverseGrowth() {
+  const priorYear = randInt(40, 300) * 10;
+  const growthPct = choice([5, 8, 10, 12, 15, 20, 25]);
+  const currentYear = Math.round(priorYear * (1 + growthPct / 100));
+
+  const prompt =
+    `A division's revenue grew by ${growthPct}% this year to reach $${currentYear.toLocaleString()}k. ` +
+    `What was the division's revenue last year, to the nearest $1,000?`;
+
+  const distractors = [
+    Math.round(currentYear * (1 - growthPct / 100)),
+    currentYear,
+    priorYear + 10,
+    Math.max(priorYear - 10, 1),
+  ];
+
+  return buildQuestion(
+    "Reading carefully: working backward",
+    prompt,
+    priorYear,
+    distractors,
+    (v) => `$${Math.round(v).toLocaleString()}k`,
+    `Current = prior × (1 + ${growthPct}/100), so prior = $${currentYear.toLocaleString()}k ÷ ` +
+      `${(1 + growthPct / 100).toFixed(2)} = $${priorYear.toLocaleString()}k. Subtracting ${growthPct}% ` +
+      `from this year's figure gives the wrong answer — growth compounds on the earlier base, not the ` +
+      `later one.`
+  );
+}
+
+function genSecondHighestWithDistraction() {
+  const regions = ["Northeast", "Southeast", "Midwest", "Southwest", "West"];
+  const shuffledRegions = shuffleInPlace([...regions]);
+  let revenues;
+  do {
+    revenues = shuffledRegions.map(() => randInt(30, 150) * 10);
+  } while (new Set(revenues).size !== revenues.length);
+
+  const sortedIdx = revenues.map((_, i) => i).sort((a, b) => revenues[b] - revenues[a]);
+  const secondIdx = sortedIdx[1];
+  const headcount = randInt(200, 900);
+  const foundedYear = randInt(1998, 2019);
+
+  const prompt =
+    `A retailer's five regions reported the following quarterly revenue: ` +
+    `${shuffledRegions.map((r, i) => `${r} $${revenues[i].toLocaleString()}k`).join(", ")}. The company, ` +
+    `founded in ${foundedYear}, now employs around ${headcount} people across all regions. Which region ` +
+    `had the second-highest revenue?`;
+
+  const distractors = shuffledRegions.filter((_, i) => i !== secondIdx);
+
+  return buildQuestion(
+    "Reading carefully: ranking",
+    prompt,
+    shuffledRegions[secondIdx],
+    distractors,
+    (v) => v,
+    `Ranked highest to lowest: ${sortedIdx.map((i) => `${shuffledRegions[i]} ($${revenues[i].toLocaleString()}k)`).join(", ")}. ` +
+      `The headcount and founding year aren't relevant to the ranking. The second-highest is ` +
+      `${shuffledRegions[secondIdx]}.`
+  );
+}
+
+function genExcludingOneOff() {
+  const reportedProfit = randInt(50, 300) * 10;
+  const oneOffCharge = randInt(10, 80) * 10;
+  const isCharge = choice([true, false]);
+  const underlyingProfit = isCharge ? reportedProfit + oneOffCharge : reportedProfit - oneOffCharge;
+  const itemWord = isCharge ? "one-off restructuring charge" : "one-off gain from an asset sale";
+  const verb = isCharge ? "reduced" : "boosted";
+
+  const prompt =
+    `A company reported net profit of $${reportedProfit.toLocaleString()}k this year. This figure includes ` +
+    `a $${oneOffCharge.toLocaleString()}k ${itemWord}, which ${verb} reported profit by that amount. What ` +
+    `was the company's underlying profit, excluding this one-off item?`;
+
+  const distractors = [
+    reportedProfit,
+    isCharge ? reportedProfit - oneOffCharge : reportedProfit + oneOffCharge,
+    underlyingProfit + 30,
+    Math.max(underlyingProfit - 30, 1),
+  ];
+
+  return buildQuestion(
+    "Reading carefully: one-off items",
+    prompt,
+    underlyingProfit,
+    distractors,
+    (v) => `$${Math.round(v).toLocaleString()}k`,
+    `The one-off item ${verb} reported profit, so to find the underlying profit we ` +
+      `${isCharge ? "add it back" : "subtract it"}: $${reportedProfit.toLocaleString()}k ` +
+      `${isCharge ? "+" : "−"} $${oneOffCharge.toLocaleString()}k = $${underlyingProfit.toLocaleString()}k.`
+  );
+}
+
+function genUnitConversionTrap() {
+  const weeklyCost = randInt(200, 900) * 10;
+  const annualCost = weeklyCost * 52;
+
+  const prompt =
+    `A regional office spends $${weeklyCost.toLocaleString()} per week on logistics. The finance team ` +
+    `wants the figure for the full year (52 weeks) to include in the annual budget. What is the annual ` +
+    `logistics cost?`;
+
+  const distractors = [
+    weeklyCost * 12,
+    weeklyCost * 4,
+    Math.round(annualCost / 12),
+    annualCost + weeklyCost,
+  ];
+
+  return buildQuestion(
+    "Reading carefully: units",
+    prompt,
+    annualCost,
+    distractors,
+    (v) => `$${Math.round(v).toLocaleString()}`,
+    `$${weeklyCost.toLocaleString()} per week × 52 weeks = $${annualCost.toLocaleString()} per year. A ` +
+      `common mistake is multiplying by 12, treating the figure as monthly instead of weekly.`
+  );
+}
+
+const STANDARD_GENERATORS = [
   genAlgebra,
   genWeightedAverage,
   genOppositeSpeed,
@@ -416,17 +694,29 @@ const GENERATORS = [
   genCompoundGrowth,
   genMixture,
   genCatchUp,
+  genGrossMargin,
+  genBreakeven,
+  genContributionMarginRatio,
+  genPaybackPeriod,
+];
+
+const CLOSE_READING_GENERATORS = [
+  genMarkupVsMargin,
+  genReverseGrowth,
+  genSecondHighestWithDistraction,
+  genExcludingOneOff,
+  genUnitConversionTrap,
 ];
 
 function buildQuestionSet() {
-  // One question per generator, in a shuffled order, so all ten topics
-  // required are always covered exactly once per playthrough.
-  const questions = GENERATORS.map((gen) => gen());
-  for (let i = questions.length - 1; i > 0; i--) {
-    const j = randInt(0, i);
-    [questions[i], questions[j]] = [questions[j], questions[i]];
-  }
-  return questions;
+  // A handful of close-reading questions every attempt (details that are
+  // easy to miss), plus a random spread of standard case-math and word
+  // problems to fill out the rest — so every playthrough is different.
+  const closeReadingPicks = sampleGenerators(CLOSE_READING_GENERATORS, Math.min(CLOSE_READING_COUNT, CLOSE_READING_GENERATORS.length));
+  const standardCount = TOTAL_QUESTIONS - closeReadingPicks.length;
+  const standardPicks = sampleGenerators(STANDARD_GENERATORS, Math.min(standardCount, STANDARD_GENERATORS.length));
+  const questions = [...closeReadingPicks, ...standardPicks].map((gen) => gen());
+  return shuffleInPlace(questions);
 }
 
 /* ---------- quiz state & DOM wiring ---------- */
