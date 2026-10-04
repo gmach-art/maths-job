@@ -123,20 +123,22 @@ function buildQuestion(category, prompt, correctValue, rawDistractors, formatFn,
 }
 
 /* ---------- question generators (standard) ---------- */
-/* Every generator is a self-contained word problem with randomised
-   numbers, so replaying the test gives a fresh set of questions. */
+/* Every generator is a self-contained word problem with randomised numbers,
+   so replaying the test gives a fresh set of questions. Most require at
+   least two reasoning steps rather than a single formula application. */
 
 function genAlgebra() {
   const a = randInt(3, 9);
+  const p = randInt(4, 15);
   const x = randInt(6, 48);
   const b = randInt(5, 120);
-  const c = a * x - b;
+  const c = a * (x + p) - b;
 
   const prompt =
-    `A recruiter poses a brain-teaser: "Think of a number, multiply it by ${a}, ` +
+    `A recruiter poses a brain-teaser: "Think of a number, add ${p}, multiply the result by ${a}, ` +
     `then subtract ${b}. The result is ${c}." What number was the candidate thinking of?`;
 
-  const distractors = [x + a, x - a, Math.round(c / a), x + 2];
+  const distractors = [x + p, Math.round((c + b - p) / a), Math.round(c / a), Math.max(x - p, 0)];
 
   return buildQuestion(
     "Algebra",
@@ -144,27 +146,29 @@ function genAlgebra() {
     x,
     distractors,
     (v) => String(Math.round(v)),
-    `${a} × ${x} − ${b} = ${c}, so the number is (${c} + ${b}) ÷ ${a} = ${x}.`
+    `${a} × (x + ${p}) − ${b} = ${c}, so x + ${p} = (${c} + ${b}) ÷ ${a} = ${x + p}, and x = ${x + p} − ${p} = ${x}.`
   );
 }
 
 function genWeightedAverage() {
-  const n1 = randInt(20, 80);
-  const n2 = randInt(20, 80);
-  const s1 = randInt(50, 95);
-  const s2 = randInt(50, 95);
-  const weighted = (n1 * s1 + n2 * s2) / (n1 + n2);
+  const n1 = randInt(15, 60);
+  const n2 = randInt(15, 60);
+  const n3 = randInt(15, 60);
+  const s1 = randInt(45, 95);
+  const s2 = randInt(45, 95);
+  const s3 = randInt(45, 95);
+  const weighted = (n1 * s1 + n2 * s2 + n3 * s3) / (n1 + n2 + n3);
   const correct = round1(weighted);
 
   const prompt =
-    `In a client-satisfaction survey, ${n1} customers from the Retail division gave an ` +
-    `average score of ${s1} out of 100, while ${n2} customers from the Corporate division ` +
-    `gave an average score of ${s2} out of 100. What is the overall average score across ` +
-    `both divisions, to 1 decimal place?`;
+    `In a client-satisfaction survey, ${n1} customers from Retail gave an average score of ${s1}, ${n2} ` +
+    `customers from Corporate gave an average score of ${s2}, and ${n3} customers from Wholesale gave an ` +
+    `average score of ${s3} (all out of 100). What is the overall average score across all three ` +
+    `divisions, to 1 decimal place?`;
 
-  const simpleAvg = round1((s1 + s2) / 2);
-  const swapped = round1((n1 * s2 + n2 * s1) / (n1 + n2));
-  const distractors = [simpleAvg, swapped, round1(weighted + 2), round1(weighted - 2)];
+  const simpleAvg = round1((s1 + s2 + s3) / 3);
+  const twoOnly = round1((n1 * s1 + n2 * s2) / (n1 + n2));
+  const distractors = [simpleAvg, twoOnly, round1(weighted + 1.5), round1(weighted - 1.5)];
 
   return buildQuestion(
     "Weighted averages",
@@ -172,28 +176,28 @@ function genWeightedAverage() {
     correct,
     distractors,
     (v) => v.toFixed(1),
-    `Weighted average = (${n1}×${s1} + ${n2}×${s2}) ÷ (${n1}+${n2}) = ${correct.toFixed(1)}.`
+    `Weighted average = (${n1}×${s1} + ${n2}×${s2} + ${n3}×${s3}) ÷ (${n1}+${n2}+${n3}) = ${correct.toFixed(1)}.`
   );
 }
 
 function genOppositeSpeed() {
-  const speed1 = randInt(8, 15) * 5; // 40-75 mph
-  const speed2 = randInt(8, 15) * 5;
-  const distance = randInt(20, 40) * 10; // 200-400 miles
+  const speed1 = randInt(38, 78);
+  const speed2 = randInt(38, 78);
+  const distance = randInt(180, 420);
   const closing = speed1 + speed2;
-  const time = round1(distance / closing);
+  const time = round2(distance / closing);
 
   const prompt =
     `Two delivery trucks leave warehouses that are ${distance} miles apart and drive directly ` +
     `toward each other along the same road. Truck A travels at ${speed1} mph and Truck B travels ` +
     `at ${speed2} mph. Assuming both maintain a constant speed, how long after they set off will ` +
-    `they meet?`;
+    `they meet, to 2 decimal places?`;
 
   const distractors = [
-    round1(distance / speed1),
-    round1(time + 0.3),
-    round1(Math.max(time - 0.3, 0.1)),
-    round1(time * 1.4),
+    round2(distance / speed1),
+    round2(time + 0.15),
+    round2(Math.max(time - 0.15, 0.05)),
+    round2(time * 1.2),
   ];
 
   return buildQuestion(
@@ -201,17 +205,17 @@ function genOppositeSpeed() {
     prompt,
     time,
     distractors,
-    (v) => `${v.toFixed(1)} hours`,
+    (v) => `${v.toFixed(2)} hours`,
     `Closing speed = ${speed1} + ${speed2} = ${closing} mph. Time = distance ÷ closing speed = ` +
-      `${distance} ÷ ${closing} = ${time.toFixed(1)} hours.`
+      `${distance} ÷ ${closing} = ${time.toFixed(2)} hours.`
   );
 }
 
 function genSimultaneous() {
-  const priceA = randInt(9, 20);
-  const priceC = randInt(3, priceA - 1);
-  const adultCount = randInt(30, 90);
-  const childCount = randInt(20, 80);
+  const priceA = randInt(11, 26);
+  const priceC = randInt(4, priceA - 2);
+  const adultCount = randInt(40, 140);
+  const childCount = randInt(30, 120);
   const total = adultCount + childCount;
   const revenue = adultCount * priceA + childCount * priceC;
 
@@ -240,18 +244,24 @@ function genSimultaneous() {
 
 function genPercentSuccessive() {
   const price = randInt(40, 300);
-  const incPct = choice([10, 15, 20, 25, 30]);
-  const decPct = choice([10, 15, 20, 25, 30]);
-  const afterInc = price * (1 + incPct / 100);
-  const final = round2(afterInc * (1 - decPct / 100));
+  const pct1 = choice([10, 15, 20, 25, 30]);
+  const pct2 = choice([10, 15, 20, 25, 30]);
+  const pct3 = choice([5, 10, 15, 20]);
+  const dir1 = choice([1, -1]);
+  const dir2 = choice([1, -1]);
+  const dir3 = choice([1, -1]);
+  const afterStep1 = price * (1 + (dir1 * pct1) / 100);
+  const afterStep2 = afterStep1 * (1 + (dir2 * pct2) / 100);
+  const final = round2(afterStep2 * (1 + (dir3 * pct3) / 100));
+  const verb = (d) => (d === 1 ? "increases" : "decreases");
 
   const prompt =
-    `A retailer increases the price of a product by ${incPct}%, then later applies a ${decPct}% ` +
-    `discount to the new price. If the product originally cost $${price}, what is the final price, ` +
-    `to the nearest cent?`;
+    `A retailer's price ${verb(dir1)} by ${pct1}%, then ${verb(dir2)} by ${pct2}% on the new price, ` +
+    `then finally ${verb(dir3)} by ${pct3}% on that price. If the product originally cost $${price}, ` +
+    `what is the final price, to the nearest cent?`;
 
-  const naiveNet = round2(price * (1 + (incPct - decPct) / 100));
-  const distractors = [price, naiveNet, round2(afterInc), round2(price * (1 - decPct / 100))];
+  const naiveNet = round2(price * (1 + (dir1 * pct1 + dir2 * pct2 + dir3 * pct3) / 100));
+  const distractors = [price, naiveNet, round2(afterStep2), round2(afterStep1)];
 
   return buildQuestion(
     "Percentages",
@@ -259,87 +269,94 @@ function genPercentSuccessive() {
     final,
     distractors,
     (v) => `$${v.toFixed(2)}`,
-    `After the increase: $${price} × ${(1 + incPct / 100).toFixed(2)} = $${afterInc.toFixed(2)}. ` +
-      `After the discount: $${afterInc.toFixed(2)} × ${(1 - decPct / 100).toFixed(2)} = $${final.toFixed(2)}.`
+    `Step 1: $${price} × ${(1 + (dir1 * pct1) / 100).toFixed(2)} = $${afterStep1.toFixed(2)}. Step 2: ` +
+      `$${afterStep1.toFixed(2)} × ${(1 + (dir2 * pct2) / 100).toFixed(2)} = $${afterStep2.toFixed(2)}. ` +
+      `Step 3: $${afterStep2.toFixed(2)} × ${(1 + (dir3 * pct3) / 100).toFixed(2)} = $${final.toFixed(2)}. ` +
+      `Simply adding the three percentages together gives the wrong answer — each change applies to the ` +
+      `new price, not the original.`
   );
 }
 
 function genRatio() {
-  let rA = randInt(2, 7);
-  let rB = randInt(2, 7);
-  while (rB === rA) rB = randInt(2, 7);
-  const divisor = gcd(rA, rB);
-  rA = rA / divisor;
-  rB = rB / divisor;
-
-  const totalPart = randInt(4, 14);
+  const rA = randInt(2, 6);
+  const rB = randInt(2, 6);
+  const rC = randInt(2, 6);
+  const totalPart = randInt(4, 12);
   const amountA = rA * totalPart;
   const amountB = rB * totalPart;
+  const amountC = rC * totalPart;
 
   const prompt =
-    `A bakery's recipe uses flour and sugar in the ratio ${rA}:${rB}. If a batch uses ${amountA} kg ` +
-    `of flour, how much sugar is needed, in kg?`;
+    `A bakery's recipe uses flour, sugar, and butter in the ratio ${rA}:${rB}:${rC}. If a batch uses ` +
+    `${amountA} kg of flour, how much butter is needed, in kg?`;
 
-  const swapped = Math.round((amountA * rA) / rB);
-  const distractors = [swapped, amountA, amountB + rA, Math.max(amountB - rB, 1)];
+  const swapped = Math.round((amountA * rB) / rA);
+  const distractors = [swapped, amountB, amountC + rC, Math.max(amountC - rC, 1)];
 
   return buildQuestion(
     "Ratios",
     prompt,
-    amountB,
+    amountC,
     distractors,
     (v) => `${Math.round(v)} kg`,
-    `Sugar = flour × (${rB}/${rA}) = ${amountA} × ${rB} ÷ ${rA} = ${amountB} kg.`
+    `Butter = flour × (${rC}/${rA}) = ${amountA} × ${rC} ÷ ${rA} = ${amountC} kg. (Sugar's ratio, ${rB}, ` +
+      `isn't needed here.)`
   );
 }
 
 function genWorkRate() {
-  const options = [4, 5, 6, 8, 9, 10, 12];
+  const options = [4, 5, 6, 8, 9, 10, 12, 15];
   const hoursA = choice(options);
   const hoursB = choice(options.filter((h) => h !== hoursA));
-  const combined = (hoursA * hoursB) / (hoursA + hoursB);
-  const correct = round1(combined);
+  const rateA = 1 / hoursA;
+  const rateB = 1 / hoursB;
+  const togetherHours = choice([1, 1.5]);
+  const workDoneTogether = togetherHours * (rateA + rateB);
+  const remaining = Math.max(1 - workDoneTogether, 0.01);
+  const finishAlone = round1(remaining / rateA);
 
   const prompt =
     `Working alone, Priya can complete a report in ${hoursA} hours and Jamal can complete the same ` +
-    `report in ${hoursB} hours. If they work together, each at their own constant rate, how long ` +
-    `will it take them to complete the report, to the nearest 0.1 hour?`;
+    `report in ${hoursB} hours. They work together for ${togetherHours} hour${togetherHours === 1 ? "" : "s"}, ` +
+    `then Jamal leaves and Priya finishes the rest alone. How many more hours does Priya need, to the ` +
+    `nearest 0.1 hour?`;
 
-  const distractors = [
-    round1((hoursA + hoursB) / 2),
-    hoursA + hoursB,
-    round1(Math.abs(hoursA - hoursB)),
-    round1(correct + 0.3),
-  ];
+  const combinedTime = round1((hoursA * hoursB) / (hoursA + hoursB));
+  const distractors = [combinedTime, hoursA, round1(finishAlone + 0.5), round1(Math.max(finishAlone - 0.5, 0.1))];
 
   return buildQuestion(
     "Work rate",
     prompt,
-    correct,
+    finishAlone,
     distractors,
     (v) => `${v.toFixed(1)} hours`,
-    `Combined rate = 1/${hoursA} + 1/${hoursB} of the report per hour. Time together = 1 ÷ ` +
-      `(1/${hoursA} + 1/${hoursB}) = ${correct.toFixed(1)} hours.`
+    `In ${togetherHours} hour${togetherHours === 1 ? "" : "s"} together they complete ${togetherHours} × ` +
+      `(1/${hoursA} + 1/${hoursB}) = ${(workDoneTogether * 100).toFixed(1)}% of the report, leaving ` +
+      `${(remaining * 100).toFixed(1)}%. Priya alone needs ${remaining.toFixed(2)} ÷ (1/${hoursA}) = ` +
+      `${finishAlone.toFixed(1)} more hours.`
   );
 }
 
 function genCompoundGrowth() {
   const principal = randInt(2, 20) * 1000;
-  const rate = choice([4, 5, 6, 8, 10]);
-  const years = choice([2, 3]);
-  const value = principal * Math.pow(1 + rate / 100, years);
+  const rate1 = choice([4, 5, 6, 8, 10]);
+  const rate2 = choice([3, 5, 7, 9, 12]);
+  const years1 = choice([2, 3]);
+  const years2 = choice([1, 2]);
+  const afterPhase1 = principal * Math.pow(1 + rate1 / 100, years1);
+  const value = afterPhase1 * Math.pow(1 + rate2 / 100, years2);
   const correct = Math.round(value);
+  const totalYears = years1 + years2;
 
   const prompt =
     `An initial investment of $${principal.toLocaleString()} grows at a compound annual rate of ` +
-    `${rate}%. What is the value of the investment after ${years} years, to the nearest dollar?`;
+    `${rate1}% for ${years1} years, then the rate changes to ${rate2}% for a further ${years2} ` +
+    `year${years2 === 1 ? "" : "s"}. What is the value of the investment at the end, to the nearest dollar?`;
 
-  const simpleInterest = Math.round(principal + principal * (rate / 100) * years);
-  const distractors = [
-    simpleInterest,
-    Math.round(principal * Math.pow(1 + rate / 100, years + 1)),
-    Math.round(principal * Math.pow(1 + rate / 100, Math.max(years - 1, 1))),
-  ];
+  const naiveSingleRate = Math.round(principal * Math.pow(1 + rate1 / 100, totalYears));
+  const avgRate = (rate1 + rate2) / 2;
+  const naiveAvg = Math.round(principal * Math.pow(1 + avgRate / 100, totalYears));
+  const distractors = [naiveSingleRate, naiveAvg, Math.round(afterPhase1)];
 
   return buildQuestion(
     "Compound growth",
@@ -347,27 +364,31 @@ function genCompoundGrowth() {
     correct,
     distractors,
     (v) => `$${Math.round(v).toLocaleString()}`,
-    `Value = $${principal.toLocaleString()} × (1 + ${rate}/100)^${years} = $${correct.toLocaleString()}.`
+    `After phase 1: $${principal.toLocaleString()} × (1 + ${rate1}/100)^${years1} = $${Math.round(afterPhase1).toLocaleString()}. ` +
+      `After phase 2: that × (1 + ${rate2}/100)^${years2} = $${correct.toLocaleString()}.`
   );
 }
 
 function genMixture() {
-  const volA = randInt(10, 40) * 5;
-  const volB = randInt(10, 40) * 5;
-  const concA = choice([10, 20, 30, 40]);
-  const concB = choice([50, 60, 70, 80].filter((c) => c > concA));
-  const totalAcid = volA * concA + volB * concB;
-  const resultConc = totalAcid / (volA + volB);
+  const volA = randInt(10, 35) * 5;
+  const volB = randInt(10, 35) * 5;
+  const volC = randInt(10, 35) * 5;
+  const concA = choice([10, 15, 20, 25]);
+  const concB = choice([35, 40, 45, 50]);
+  const concC = choice([60, 65, 70, 75]);
+  const totalAcid = volA * concA + volB * concB + volC * concC;
+  const totalVol = volA + volB + volC;
+  const resultConc = totalAcid / totalVol;
   const correct = round1(resultConc);
 
   const prompt =
-    `A chemist mixes ${volA} liters of a solution that is ${concA}% acid with ${volB} liters of a ` +
-    `solution that is ${concB}% acid. What is the acid concentration of the resulting mixture, to ` +
-    `1 decimal place?`;
+    `A chemist mixes ${volA} liters of a ${concA}% acid solution, ${volB} liters of a ${concB}% acid ` +
+    `solution, and ${volC} liters of a ${concC}% acid solution. What is the acid concentration of the ` +
+    `combined mixture, to 1 decimal place?`;
 
-  const simpleAvg = round1((concA + concB) / 2);
-  const swapped = round1((volA * concB + volB * concA) / (volA + volB));
-  const distractors = [simpleAvg, swapped, round1(resultConc + 1.5), round1(Math.max(resultConc - 1.5, 0))];
+  const simpleAvg = round1((concA + concB + concC) / 3);
+  const twoOnly = round1((volA * concA + volB * concB) / (volA + volB));
+  const distractors = [simpleAvg, twoOnly, round1(resultConc + 1.2), round1(Math.max(resultConc - 1.2, 0))];
 
   return buildQuestion(
     "Mixtures",
@@ -375,30 +396,30 @@ function genMixture() {
     correct,
     distractors,
     (v) => `${v.toFixed(1)}%`,
-    `Total acid = ${volA}×${concA}% + ${volB}×${concB}% = ${totalAcid}. Concentration = total acid ÷ ` +
-      `total volume = ${totalAcid} ÷ ${volA + volB} = ${correct.toFixed(1)}%.`
+    `Total acid = ${volA}×${concA}% + ${volB}×${concB}% + ${volC}×${concC}% = ${totalAcid}. Concentration ` +
+      `= total acid ÷ total volume = ${totalAcid} ÷ ${totalVol} = ${correct.toFixed(1)}%.`
   );
 }
 
 function genCatchUp() {
-  const speedSlow = randInt(6, 12) * 5;
-  const speedFast = speedSlow + randInt(2, 6) * 5;
-  const headStart = choice([0.5, 1, 1.5, 2]);
+  const speedSlow = randInt(32, 62);
+  const speedFast = speedSlow + randInt(8, 28);
+  const headStart = choice([0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]);
   const gap = speedSlow * headStart;
   const closingSpeed = speedFast - speedSlow;
-  const timeToCatch = round1(gap / closingSpeed);
+  const timeToCatch = round2(gap / closingSpeed);
 
   const prompt =
     `Car A leaves a service station and travels at a constant ${speedSlow} mph. Car B leaves the ` +
-    `same service station along the same road ${headStart} hour${headStart === 1 ? "" : "s"} later, ` +
-    `travelling at a constant ${speedFast} mph in the same direction. How long after Car B departs ` +
-    `will it catch up with Car A?`;
+    `same service station along the same road ${headStart} hours later, travelling at a constant ` +
+    `${speedFast} mph in the same direction. How long after Car B departs will it catch up with Car A, ` +
+    `to 2 decimal places?`;
 
   const distractors = [
     headStart,
-    round1(gap / (speedFast + speedSlow)),
-    round1(timeToCatch + 0.3),
-    round1((speedFast * headStart) / closingSpeed),
+    round2(gap / (speedFast + speedSlow)),
+    round2(timeToCatch + 0.2),
+    round2((speedFast * headStart) / closingSpeed),
   ];
 
   return buildQuestion(
@@ -406,28 +427,31 @@ function genCatchUp() {
     prompt,
     timeToCatch,
     distractors,
-    (v) => `${v.toFixed(1)} hours`,
-    `Car A has a ${gap.toFixed(0)}-mile head start when Car B departs. Car B closes the gap at ` +
-      `${closingSpeed} mph, so time to catch up = ${gap.toFixed(0)} ÷ ${closingSpeed} = ` +
-      `${timeToCatch.toFixed(1)} hours.`
+    (v) => `${v.toFixed(2)} hours`,
+    `Car A has a ${gap.toFixed(1)}-mile head start when Car B departs. Car B closes the gap at ` +
+      `${closingSpeed} mph, so time to catch up = ${gap.toFixed(1)} ÷ ${closingSpeed} = ` +
+      `${timeToCatch.toFixed(2)} hours.`
   );
 }
 
 function genGrossMargin() {
   const revenue = randInt(20, 120) * 10;
-  const cogsPct = randInt(40, 75);
+  const cogsPct = randInt(35, 65);
+  const opexPct = randInt(10, 25);
   const cogs = Math.round((revenue * cogsPct) / 100);
-  const grossProfit = revenue - cogs;
-  const margin = round1((grossProfit / revenue) * 100);
+  const opex = Math.round((revenue * opexPct) / 100);
+  const netProfit = revenue - cogs - opex;
+  const margin = round1((netProfit / revenue) * 100);
 
   const prompt =
-    `A business reports revenue of $${revenue}k and cost of goods sold (COGS) of $${cogs}k for the ` +
-    `quarter. What is the company's gross margin (gross profit as a percentage of revenue), to 1 ` +
-    `decimal place?`;
+    `A business reports revenue of $${revenue}k, cost of goods sold (COGS) of $${cogs}k, and operating ` +
+    `expenses of $${opex}k for the quarter. What is the company's net profit margin (net profit as a ` +
+    `percentage of revenue), to 1 decimal place?`;
 
+  const grossMarginOnly = round1(((revenue - cogs) / revenue) * 100);
   const distractors = [
+    grossMarginOnly,
     round1((cogs / revenue) * 100),
-    round1((grossProfit / cogs) * 100),
     round1(margin + 3),
     round1(Math.max(margin - 3, 1)),
   ];
@@ -438,8 +462,9 @@ function genGrossMargin() {
     margin,
     distractors,
     (v) => `${v.toFixed(1)}%`,
-    `Gross profit = $${revenue}k − $${cogs}k = $${grossProfit}k. Gross margin = $${grossProfit}k ÷ ` +
-      `$${revenue}k × 100 = ${margin.toFixed(1)}%.`
+    `Net profit = $${revenue}k − $${cogs}k − $${opex}k = $${netProfit}k. Net margin = $${netProfit}k ÷ ` +
+      `$${revenue}k × 100 = ${margin.toFixed(1)}%. Stopping after COGS alone gives the gross margin ` +
+      `(${grossMarginOnly.toFixed(1)}%), not the net margin asked for.`
   );
 }
 
@@ -448,86 +473,116 @@ function genBreakeven() {
   const pricePerUnit = randInt(15, 60);
   const variableCostPerUnit = randInt(5, pricePerUnit - 5);
   const contributionPerUnit = pricePerUnit - variableCostPerUnit;
-  const breakevenUnits = Math.ceil(fixedCosts / contributionPerUnit);
+  const targetProfit = randInt(10, 100) * 100;
+  const requiredUnits = Math.ceil((fixedCosts + targetProfit) / contributionPerUnit);
+  const breakevenOnly = Math.ceil(fixedCosts / contributionPerUnit);
 
   const prompt =
     `A startup has fixed costs of $${fixedCosts.toLocaleString()} per month. Each unit sells for ` +
     `$${pricePerUnit} and costs $${variableCostPerUnit} in variable costs to produce. How many units ` +
-    `must it sell per month to break even?`;
+    `must it sell per month to earn a target profit of $${targetProfit.toLocaleString()}?`;
 
   const distractors = [
+    breakevenOnly,
     Math.ceil(fixedCosts / pricePerUnit),
-    breakevenUnits + 15,
-    Math.max(breakevenUnits - 15, 1),
-    Math.round(breakevenUnits * 1.25),
+    requiredUnits + 15,
+    Math.max(requiredUnits - 15, 1),
   ];
 
   return buildQuestion(
     "Break-even analysis",
     prompt,
-    breakevenUnits,
+    requiredUnits,
     distractors,
     (v) => `${Math.round(v).toLocaleString()} units`,
     `Contribution margin per unit = $${pricePerUnit} − $${variableCostPerUnit} = $${contributionPerUnit}. ` +
-      `Break-even units = fixed costs ÷ contribution per unit = $${fixedCosts.toLocaleString()} ÷ ` +
-      `$${contributionPerUnit} ≈ ${breakevenUnits.toLocaleString()} units.`
+      `Units needed = (fixed costs + target profit) ÷ contribution per unit = ` +
+      `($${fixedCosts.toLocaleString()} + $${targetProfit.toLocaleString()}) ÷ $${contributionPerUnit} ≈ ` +
+      `${requiredUnits.toLocaleString()} units. (Plain break-even, ignoring the target profit, would only ` +
+      `need ${breakevenOnly.toLocaleString()} units.)`
   );
 }
 
 function genContributionMarginRatio() {
-  const pricePerUnit = randInt(20, 100);
-  const variableCostPerUnit = randInt(5, pricePerUnit - 5);
-  const contribution = pricePerUnit - variableCostPerUnit;
-  const ratio = round1((contribution / pricePerUnit) * 100);
+  const priceA = randInt(30, 100);
+  const varA = randInt(5, priceA - 10);
+  const priceB = randInt(30, 100);
+  const varB = randInt(5, priceB - 10);
+  const mixAPct = choice([30, 40, 50, 60, 70]);
+  const mixBPct = 100 - mixAPct;
+  const cmA = priceA - varA;
+  const cmB = priceB - varB;
+  const ratioA = (cmA / priceA) * 100;
+  const ratioB = (cmB / priceB) * 100;
+  const blended = round1((mixAPct / 100) * ratioA + (mixBPct / 100) * ratioB);
 
   const prompt =
-    `A product sells for $${pricePerUnit} per unit and has a variable cost of $${variableCostPerUnit} ` +
-    `per unit. What is the contribution margin ratio (contribution margin as a percentage of selling ` +
-    `price), to 1 decimal place?`;
+    `A company sells two products. Product A sells for $${priceA} with a variable cost of $${varA}, and ` +
+    `makes up ${mixAPct}% of unit sales. Product B sells for $${priceB} with a variable cost of $${varB}, ` +
+    `and makes up the remaining ${mixBPct}% of unit sales. What is the company's blended contribution ` +
+    `margin ratio, weighted by sales mix, to 1 decimal place?`;
 
-  const distractors = [
-    round1((variableCostPerUnit / pricePerUnit) * 100),
-    round1(ratio + 5),
-    round1(Math.max(ratio - 5, 1)),
-    round1(Math.min(ratio + 12, 97)),
-  ];
+  const simpleAvg = round1((ratioA + ratioB) / 2);
+  const distractors = [simpleAvg, round1(blended + 4), round1(Math.max(blended - 4, 1)), round1(ratioA)];
 
   return buildQuestion(
     "Contribution margin",
     prompt,
-    ratio,
+    blended,
     distractors,
     (v) => `${v.toFixed(1)}%`,
-    `Contribution margin per unit = $${pricePerUnit} − $${variableCostPerUnit} = $${contribution}. Ratio ` +
-      `= $${contribution} ÷ $${pricePerUnit} × 100 = ${ratio.toFixed(1)}%.`
+    `Product A margin = ($${priceA} − $${varA}) ÷ $${priceA} × 100 = ${ratioA.toFixed(1)}%. Product B ` +
+      `margin = ($${priceB} − $${varB}) ÷ $${priceB} × 100 = ${ratioB.toFixed(1)}%. Blended = ${mixAPct}% × ` +
+      `${ratioA.toFixed(1)}% + ${mixBPct}% × ${ratioB.toFixed(1)}% = ${blended.toFixed(1)}%.`
   );
 }
 
 function genPaybackPeriod() {
-  const investment = randInt(50, 400) * 1000;
-  const annualSaving = randInt(10, 80) * 1000;
-  const paybackYears = round1(investment / annualSaving);
+  const investment = randInt(60, 200) * 1000;
+  const cashFlows = [randInt(10, 60) * 1000, randInt(10, 60) * 1000, randInt(10, 60) * 1000, randInt(10, 60) * 1000];
+
+  let cumulative = 0;
+  let paybackYear = null;
+  let fractionalYear = null;
+  for (let i = 0; i < cashFlows.length; i++) {
+    const prevCumulative = cumulative;
+    cumulative += cashFlows[i];
+    if (cumulative >= investment && paybackYear === null) {
+      paybackYear = i + 1;
+      const remaining = investment - prevCumulative;
+      fractionalYear = round1(i + remaining / cashFlows[i]);
+    }
+  }
+  if (paybackYear === null) return genPaybackPeriod(); // regenerate if not recovered within 4 years
 
   const prompt =
-    `A company invests $${investment.toLocaleString()} in new equipment that is expected to generate ` +
-    `$${annualSaving.toLocaleString()} in additional annual cash flow. What is the payback period, to ` +
-    `1 decimal place?`;
+    `A company invests $${investment.toLocaleString()} in a new project, expected to generate these ` +
+    `cash flows — Year 1: $${cashFlows[0].toLocaleString()}, Year 2: $${cashFlows[1].toLocaleString()}, ` +
+    `Year 3: $${cashFlows[2].toLocaleString()}, Year 4: $${cashFlows[3].toLocaleString()}. What is the ` +
+    `payback period, to the nearest 0.1 year?`;
 
+  const avgCF = cashFlows.reduce((a, b) => a + b, 0) / 4;
+  const naiveSimple = round1(investment / avgCF);
   const distractors = [
-    round1(annualSaving / investment),
-    round1(paybackYears + 0.8),
-    round1(Math.max(paybackYears - 0.8, 0.1)),
-    round1(paybackYears * 1.3),
+    naiveSimple,
+    paybackYear,
+    round1(fractionalYear + 0.5),
+    round1(Math.max(fractionalYear - 0.5, 0.1)),
   ];
+
+  const cumulativeStr = cashFlows
+    .map((_, i) => `Y${i + 1} $${cashFlows.slice(0, i + 1).reduce((a, b) => a + b, 0).toLocaleString()}`)
+    .join(", ");
 
   return buildQuestion(
     "Payback period",
     prompt,
-    paybackYears,
+    fractionalYear,
     distractors,
     (v) => `${v.toFixed(1)} years`,
-    `Payback period = investment ÷ annual cash flow = $${investment.toLocaleString()} ÷ ` +
-      `$${annualSaving.toLocaleString()} = ${paybackYears.toFixed(1)} years.`
+    `Cumulative cash flow: ${cumulativeStr}. The investment is recovered during year ${paybackYear}: ` +
+      `payback = ${fractionalYear.toFixed(1)} years. (Dividing the investment by the average annual cash ` +
+      `flow only works when cash flows are even, which they aren't here.)`
   );
 }
 
@@ -538,56 +593,62 @@ function genPaybackPeriod() {
 
 function genMarkupVsMargin() {
   const cost = randInt(20, 80) * 5;
-  const markupPct = choice([20, 25, 30, 40, 50, 60]);
-  const sellingPrice = Math.round(cost * (1 + markupPct / 100));
-  const grossProfit = sellingPrice - cost;
-  const marginPct = round1((grossProfit / sellingPrice) * 100);
+  const targetMarginPct = choice([20, 25, 30, 35, 40, 45]);
+  const requiredMarkupPct = round1((targetMarginPct / (100 - targetMarginPct)) * 100);
 
   const prompt =
-    `A retailer buys a product for $${cost} and applies a ${markupPct}% markup on cost to set the ` +
-    `selling price. What is the resulting gross margin, expressed as a percentage of the selling ` +
-    `price, to 1 decimal place?`;
+    `A retailer buys a product for $${cost} and wants to achieve a gross margin of ${targetMarginPct}% of ` +
+    `the selling price. What markup on cost must it apply, to 1 decimal place?`;
 
-  const distractors = [markupPct, round1(markupPct - 5), round1(marginPct + 4), round1(Math.max(marginPct - 4, 1))];
+  const distractors = [
+    targetMarginPct,
+    round1(targetMarginPct + 5),
+    round1(requiredMarkupPct + 5),
+    round1(Math.max(requiredMarkupPct - 5, 1)),
+  ];
 
   return buildQuestion(
     "Reading carefully: margin vs. markup",
     prompt,
-    marginPct,
+    requiredMarkupPct,
     distractors,
     (v) => `${v.toFixed(1)}%`,
-    `Selling price = $${cost} × (1 + ${markupPct}/100) = $${sellingPrice}. Gross profit = $${sellingPrice} − ` +
-      `$${cost} = $${grossProfit}. Margin = $${grossProfit} ÷ $${sellingPrice} × 100 = ${marginPct.toFixed(1)}% ` +
-      `— lower than the ${markupPct}% markup, because margin is measured against selling price, not cost.`
+    `Margin and markup relate by markup = margin ÷ (1 − margin). Markup = ${targetMarginPct}% ÷ ` +
+      `(100% − ${targetMarginPct}%) × 100 = ${requiredMarkupPct.toFixed(1)}% — higher than the ` +
+      `${targetMarginPct}% margin target, since markup is measured against the smaller cost base, not ` +
+      `the selling price.`
   );
 }
 
 function genReverseGrowth() {
-  const priorYear = randInt(40, 300) * 10;
-  const growthPct = choice([5, 8, 10, 12, 15, 20, 25]);
-  const currentYear = Math.round(priorYear * (1 + growthPct / 100));
+  const twoYearsAgo = randInt(40, 300) * 10;
+  const growthPct1 = choice([5, 8, 10, 12, 15, 20]);
+  const growthPct2 = choice([5, 8, 10, 12, 15, 20]);
+  const oneYearAgo = Math.round(twoYearsAgo * (1 + growthPct1 / 100));
+  const currentYear = Math.round(oneYearAgo * (1 + growthPct2 / 100));
 
   const prompt =
-    `A division's revenue grew by ${growthPct}% this year to reach $${currentYear.toLocaleString()}k. ` +
-    `What was the division's revenue last year, to the nearest $1,000?`;
+    `A division's revenue grew by ${growthPct1}% two years ago and then by ${growthPct2}% this past ` +
+    `year, reaching $${currentYear.toLocaleString()}k today. What was the division's revenue two years ` +
+    `ago, to the nearest $1,000?`;
 
   const distractors = [
-    Math.round(currentYear * (1 - growthPct / 100)),
-    currentYear,
-    priorYear + 10,
-    Math.max(priorYear - 10, 1),
+    Math.round(currentYear / (1 + (growthPct1 + growthPct2) / 100)),
+    oneYearAgo,
+    twoYearsAgo + 10,
+    Math.max(twoYearsAgo - 10, 1),
   ];
 
   return buildQuestion(
     "Reading carefully: working backward",
     prompt,
-    priorYear,
+    twoYearsAgo,
     distractors,
     (v) => `$${Math.round(v).toLocaleString()}k`,
-    `Current = prior × (1 + ${growthPct}/100), so prior = $${currentYear.toLocaleString()}k ÷ ` +
-      `${(1 + growthPct / 100).toFixed(2)} = $${priorYear.toLocaleString()}k. Subtracting ${growthPct}% ` +
-      `from this year's figure gives the wrong answer — growth compounds on the earlier base, not the ` +
-      `later one.`
+    `Working backward: one year ago = $${currentYear.toLocaleString()}k ÷ (1 + ${growthPct2}/100) = ` +
+      `$${oneYearAgo.toLocaleString()}k. Two years ago = $${oneYearAgo.toLocaleString()}k ÷ ` +
+      `(1 + ${growthPct1}/100) = $${twoYearsAgo.toLocaleString()}k. Stopping after undoing only one year's ` +
+      `growth gives the wrong answer.`
   );
 }
 
@@ -600,48 +661,54 @@ function genSecondHighestWithDistraction() {
   } while (new Set(revenues).size !== revenues.length);
 
   const sortedIdx = revenues.map((_, i) => i).sort((a, b) => revenues[b] - revenues[a]);
+  const highestIdx = sortedIdx[0];
   const secondIdx = sortedIdx[1];
+  const gap = revenues[highestIdx] - revenues[secondIdx];
   const headcount = randInt(200, 900);
   const foundedYear = randInt(1998, 2019);
 
   const prompt =
     `A retailer's five regions reported the following quarterly revenue: ` +
     `${shuffledRegions.map((r, i) => `${r} $${revenues[i].toLocaleString()}k`).join(", ")}. The company, ` +
-    `founded in ${foundedYear}, now employs around ${headcount} people across all regions. Which region ` +
-    `had the second-highest revenue?`;
+    `founded in ${foundedYear}, now employs around ${headcount} people across all regions. What is the ` +
+    `gap in revenue between the highest-performing and second-highest-performing region?`;
 
-  const distractors = shuffledRegions.filter((_, i) => i !== secondIdx);
+  const distractors = [
+    revenues[highestIdx],
+    revenues[secondIdx],
+    gap + 10,
+    Math.max(gap - 10, 1),
+  ];
 
   return buildQuestion(
     "Reading carefully: ranking",
     prompt,
-    shuffledRegions[secondIdx],
+    gap,
     distractors,
-    (v) => v,
+    (v) => `$${Math.round(v).toLocaleString()}k`,
     `Ranked highest to lowest: ${sortedIdx.map((i) => `${shuffledRegions[i]} ($${revenues[i].toLocaleString()}k)`).join(", ")}. ` +
-      `The headcount and founding year aren't relevant to the ranking. The second-highest is ` +
-      `${shuffledRegions[secondIdx]}.`
+      `The headcount and founding year aren't relevant. Gap = $${revenues[highestIdx].toLocaleString()}k − ` +
+      `$${revenues[secondIdx].toLocaleString()}k = $${gap.toLocaleString()}k.`
   );
 }
 
 function genExcludingOneOff() {
   const reportedProfit = randInt(50, 300) * 10;
-  const oneOffCharge = randInt(10, 80) * 10;
-  const isCharge = choice([true, false]);
-  const underlyingProfit = isCharge ? reportedProfit + oneOffCharge : reportedProfit - oneOffCharge;
-  const itemWord = isCharge ? "one-off restructuring charge" : "one-off gain from an asset sale";
-  const verb = isCharge ? "reduced" : "boosted";
+  const charge = randInt(10, 60) * 10;
+  const gain = randInt(10, 60) * 10;
+  const underlyingProfit = reportedProfit + charge - gain;
 
   const prompt =
-    `A company reported net profit of $${reportedProfit.toLocaleString()}k this year. This figure includes ` +
-    `a $${oneOffCharge.toLocaleString()}k ${itemWord}, which ${verb} reported profit by that amount. What ` +
-    `was the company's underlying profit, excluding this one-off item?`;
+    `A company reported net profit of $${reportedProfit.toLocaleString()}k this year. This figure ` +
+    `includes both a $${charge.toLocaleString()}k one-off restructuring charge (which reduced reported ` +
+    `profit) and a $${gain.toLocaleString()}k one-off gain from an asset sale (which boosted reported ` +
+    `profit). What was the company's underlying profit, excluding both one-off items?`;
 
   const distractors = [
     reportedProfit,
-    isCharge ? reportedProfit - oneOffCharge : reportedProfit + oneOffCharge,
+    reportedProfit + charge + gain,
+    reportedProfit - charge + gain,
     underlyingProfit + 30,
-    Math.max(underlyingProfit - 30, 1),
   ];
 
   return buildQuestion(
@@ -650,26 +717,27 @@ function genExcludingOneOff() {
     underlyingProfit,
     distractors,
     (v) => `$${Math.round(v).toLocaleString()}k`,
-    `The one-off item ${verb} reported profit, so to find the underlying profit we ` +
-      `${isCharge ? "add it back" : "subtract it"}: $${reportedProfit.toLocaleString()}k ` +
-      `${isCharge ? "+" : "−"} $${oneOffCharge.toLocaleString()}k = $${underlyingProfit.toLocaleString()}k.`
+    `Add back the charge and subtract out the gain: $${reportedProfit.toLocaleString()}k + ` +
+      `$${charge.toLocaleString()}k − $${gain.toLocaleString()}k = $${underlyingProfit.toLocaleString()}k.`
   );
 }
 
 function genUnitConversionTrap() {
-  const weeklyCost = randInt(200, 900) * 10;
-  const annualCost = weeklyCost * 52;
+  const dailyCost = randInt(150, 600) * 10;
+  const daysPerWeek = 5;
+  const weeksPerYear = 50;
+  const annualCost = dailyCost * daysPerWeek * weeksPerYear;
 
   const prompt =
-    `A regional office spends $${weeklyCost.toLocaleString()} per week on logistics. The finance team ` +
-    `wants the figure for the full year (52 weeks) to include in the annual budget. What is the annual ` +
-    `logistics cost?`;
+    `A regional office spends $${dailyCost.toLocaleString()} per business day on logistics. The office ` +
+    `operates ${daysPerWeek} days a week for ${weeksPerYear} weeks a year (it's closed the rest of the ` +
+    `year). What is the annual logistics cost?`;
 
   const distractors = [
-    weeklyCost * 12,
-    weeklyCost * 4,
+    dailyCost * 365,
+    dailyCost * daysPerWeek * 52,
+    dailyCost * 7 * weeksPerYear,
     Math.round(annualCost / 12),
-    annualCost + weeklyCost,
   ];
 
   return buildQuestion(
@@ -678,8 +746,9 @@ function genUnitConversionTrap() {
     annualCost,
     distractors,
     (v) => `$${Math.round(v).toLocaleString()}`,
-    `$${weeklyCost.toLocaleString()} per week × 52 weeks = $${annualCost.toLocaleString()} per year. A ` +
-      `common mistake is multiplying by 12, treating the figure as monthly instead of weekly.`
+    `$${dailyCost.toLocaleString()} × ${daysPerWeek} days × ${weeksPerYear} weeks = ` +
+      `$${annualCost.toLocaleString()} per year. Common mistakes: using 365 calendar days, 52 weeks ` +
+      `instead of the office's ${weeksPerYear} operating weeks, or counting weekends.`
   );
 }
 
