@@ -61,6 +61,10 @@ python3 -m http.server 8000
   assessment centre). The test auto-submits if time runs out.
 - Answers lock in once selected (no changing your mind, like the real thing),
   and a full review with worked explanations is shown at the end.
+- Most questions require at least two reasoning steps (e.g. solving for an
+  intermediate value before the final answer, or compounding a rate across
+  multiple periods) rather than a single formula application, and numbers
+  are kept deliberately non-round so they can't be estimated at a glance.
 
 ## What the Data Analysis quiz does
 
@@ -83,6 +87,10 @@ python3 -m http.server 8000
   selected, a full review (with the original chart or table alongside each
   worked explanation) is shown at the end, and a line graph tracks your score
   out of 15 across every attempt on this device.
+- Most questions require locating two figures and combining them (a
+  two-period change, a gap between categories, a weighted or compounded
+  rate) rather than a single direct read, and chart/table values are kept
+  deliberately non-round.
 
 ## Files
 
