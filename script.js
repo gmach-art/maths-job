@@ -161,31 +161,40 @@ function genWeightedAverage() {
 function genOppositeSpeed() {
   const speed1 = randInt(38, 78);
   const speed2 = randInt(38, 78);
-  const distance = randInt(180, 420);
+  const distance = randInt(220, 480);
+  const delay = choice([0.25, 0.5, 0.75, 1, 1.25, 1.5]);
+
+  const headStartGap = round2(speed1 * delay);
+  if (headStartGap >= distance) return genOppositeSpeed(); // Truck A would already be there before B even leaves
+
+  const remainingGap = round2(distance - headStartGap);
   const closing = speed1 + speed2;
-  const time = round2(distance / closing);
+  const timeAfterBDeparts = round2(remainingGap / closing);
+  const totalTime = round2(delay + timeAfterBDeparts);
 
   const prompt =
-    `Two delivery trucks leave warehouses that are ${distance} miles apart and drive directly ` +
-    `toward each other along the same road. Truck A travels at ${speed1} mph and Truck B travels ` +
-    `at ${speed2} mph. Assuming both maintain a constant speed, how long after they set off will ` +
-    `they meet, to 2 decimal places?`;
+    `Truck A leaves a warehouse and travels at a constant ${speed1} mph directly toward a second warehouse ` +
+    `${distance} miles away. Truck B leaves the second warehouse ${delay} hours later, travelling at a ` +
+    `constant ${speed2} mph directly toward Truck A along the same road. How long after Truck A departs ` +
+    `will the two trucks meet, to 2 decimal places?`;
 
-  const distractors = [
-    round2(distance / speed1),
-    round2(time + 0.15),
-    round2(Math.max(time - 0.15, 0.05)),
-    round2(time * 1.2),
-  ];
+  const naiveIgnoreDelay = round2(distance / closing); // pretends both left at the same time
+  const forgotToAddDelay = timeAfterBDeparts; // counts only the time after B departs, not the total since A left
+  const delayAppliedToWrongTruck = round2(delay + (distance - round2(speed2 * delay)) / closing); // gives the head start to B instead of A
+  const forgotHeadStartDistance = round2(delay + distance / closing); // adds the delay but never shrinks the gap A already closed
+  const distractors = [naiveIgnoreDelay, forgotToAddDelay, delayAppliedToWrongTruck, forgotHeadStartDistance];
 
   return buildQuestion(
     "Speed & distance (opposite directions)",
     prompt,
-    time,
+    totalTime,
     distractors,
     (v) => `${v.toFixed(2)} hours`,
-    `Closing speed = ${speed1} + ${speed2} = ${closing} mph. Time = distance ÷ closing speed = ` +
-      `${distance} ÷ ${closing} = ${time.toFixed(2)} hours.`
+    `In its ${delay}-hour head start, Truck A covers ${speed1} × ${delay} = ${headStartGap.toFixed(1)} miles, ` +
+      `leaving ${remainingGap.toFixed(1)} miles between the trucks once Truck B finally sets off. Closing ` +
+      `speed once both are moving = ${speed1} + ${speed2} = ${closing} mph, so that remaining gap takes ` +
+      `${remainingGap.toFixed(1)} ÷ ${closing} = ${timeAfterBDeparts.toFixed(2)} hours to close. Total time ` +
+      `since Truck A departed = ${delay} + ${timeAfterBDeparts.toFixed(2)} = ${totalTime.toFixed(2)} hours.`
   );
 }
 
@@ -256,9 +265,7 @@ function genPercentSuccessive() {
 }
 
 function genRatio() {
-  const rA = randInt(2, 6);
-  const rB = randInt(2, 6);
-  const rC = randInt(2, 6);
+  const [rA, rB, rC] = shuffleInPlace([2, 3, 4, 5, 6, 7, 8, 9]).slice(0, 3);
   const totalPart = randInt(4, 12);
   const amountA = rA * totalPart;
   const amountB = rB * totalPart;
@@ -585,87 +592,114 @@ function genMarkupVsMargin() {
   const cost = randInt(20, 80) * 5;
   const targetMarginPct = choice([20, 25, 30, 35, 40, 45]);
   const requiredMarkupPct = round1((targetMarginPct / (100 - targetMarginPct)) * 100);
+  const stickerPrice = round2(cost * (1 + requiredMarkupPct / 100));
+  const clearanceDiscountPct = choice([10, 15, 20, 25]);
+  const finalPrice = round2(stickerPrice * (1 - clearanceDiscountPct / 100));
 
   const prompt =
     `A retailer buys a product for $${cost} and wants to achieve a gross margin of ${targetMarginPct}% of ` +
-    `the selling price. What markup on cost must it apply, to 1 decimal place?`;
+    `the selling price (remember: margin is a percentage of the selling price, markup is a percentage of ` +
+    `cost — they are not the same number). It prices the product by applying the markup on cost that ` +
+    `achieves that margin, then later puts it on clearance at ${clearanceDiscountPct}% off that marked-up ` +
+    `price. What is the final clearance price, to the nearest cent?`;
 
-  const distractors = [
-    targetMarginPct,
-    round1(targetMarginPct + 5),
-    round1(requiredMarkupPct + 5),
-    round1(Math.max(requiredMarkupPct - 5, 1)),
-  ];
+  const skippedMarkupConversion = round2(cost * (1 + targetMarginPct / 100) * (1 - clearanceDiscountPct / 100)); // used the margin % as if it were the markup %
+  const discountOffCostNotPrice = round2(stickerPrice - cost * (clearanceDiscountPct / 100)); // took the discount off cost instead of off the sticker price
+  const forgotDiscount = stickerPrice; // never applied the clearance step at all
+  const distractors = [skippedMarkupConversion, discountOffCostNotPrice, forgotDiscount, round2(finalPrice + 2)];
 
   return buildQuestion(
     "Reading carefully: margin vs. markup",
     prompt,
-    requiredMarkupPct,
+    finalPrice,
     distractors,
-    (v) => `${v.toFixed(1)}%`,
-    `Margin and markup relate by markup = margin ÷ (1 − margin). Markup = ${targetMarginPct}% ÷ ` +
-      `(100% − ${targetMarginPct}%) × 100 = ${requiredMarkupPct.toFixed(1)}% — higher than the ` +
-      `${targetMarginPct}% margin target, since markup is measured against the smaller cost base, not ` +
-      `the selling price.`
+    (v) => `$${v.toFixed(2)}`,
+    `Margin and markup relate by markup = margin ÷ (1 − margin): markup = ${targetMarginPct}% ÷ ` +
+      `(100% − ${targetMarginPct}%) × 100 = ${requiredMarkupPct.toFixed(1)}%. Marked-up price = $${cost} × ` +
+      `(1 + ${requiredMarkupPct.toFixed(1)}/100) = $${stickerPrice.toFixed(2)}. Clearance price = ` +
+      `$${stickerPrice.toFixed(2)} × (1 − ${clearanceDiscountPct}/100) = $${finalPrice.toFixed(2)}. Using the ` +
+      `${targetMarginPct}% margin figure directly as the markup (instead of converting it first) gives the ` +
+      `wrong sticker price before the discount is even applied.`
   );
 }
 
 function genReverseGrowth() {
-  const twoYearsAgo = randInt(40, 300) * 10;
-  const growthPct1 = choice([5, 8, 10, 12, 15, 20]);
-  const growthPct2 = choice([5, 8, 10, 12, 15, 20]);
-  const oneYearAgo = Math.round(twoYearsAgo * (1 + growthPct1 / 100));
-  const currentYear = Math.round(oneYearAgo * (1 + growthPct2 / 100));
+  const threeYearsAgo = randInt(40, 300) * 10;
+  const pctOptions = [5, 8, 10, 12, 15, 20];
+  const growthPct1 = choice(pctOptions);
+  const growthPct2 = choice(pctOptions);
+  const growthPct3 = choice(pctOptions);
+  const dir2 = choice([1, 1, -1]); // occasionally a decline partway through, so the direction can't be assumed
+  const twoYearsAgo = Math.round(threeYearsAgo * (1 + growthPct1 / 100));
+  const oneYearAgo = Math.round(twoYearsAgo * (1 + (dir2 * growthPct2) / 100));
+  const currentYear = Math.round(oneYearAgo * (1 + growthPct3 / 100));
+  const verb2 = dir2 === 1 ? "grew" : "fell";
 
   const prompt =
-    `A division's revenue grew by ${growthPct1}% two years ago and then by ${growthPct2}% this past ` +
-    `year, reaching $${currentYear.toLocaleString()}k today. What was the division's revenue two years ` +
-    `ago, to the nearest $1,000?`;
+    `A division's revenue grew by ${growthPct1}% three years ago, then ${verb2} by ${growthPct2}% the ` +
+    `following year, then grew by ${growthPct3}% this past year, reaching $${currentYear.toLocaleString()}k ` +
+    `today. What was the division's revenue three years ago, to the nearest $1,000?`;
 
   const distractors = [
-    Math.round(currentYear / (1 + (growthPct1 + growthPct2) / 100)),
-    oneYearAgo,
-    twoYearsAgo + 10,
-    Math.max(twoYearsAgo - 10, 1),
+    Math.round(currentYear / (1 + (growthPct1 + dir2 * growthPct2 + growthPct3) / 100)), // adds the percentages instead of compounding them
+    twoYearsAgo, // stopped one reversal step early
+    oneYearAgo, // stopped two reversal steps early
+    Math.round(threeYearsAgo * (1 + growthPct1 / 100)), // reversed the first step in the wrong direction
   ];
 
   return buildQuestion(
     "Reading carefully: working backward",
     prompt,
-    twoYearsAgo,
+    threeYearsAgo,
     distractors,
     (v) => `$${Math.round(v).toLocaleString()}k`,
-    `Working backward: one year ago = $${currentYear.toLocaleString()}k ÷ (1 + ${growthPct2}/100) = ` +
+    `Working backward: one year ago = $${currentYear.toLocaleString()}k ÷ (1 + ${growthPct3}/100) = ` +
       `$${oneYearAgo.toLocaleString()}k. Two years ago = $${oneYearAgo.toLocaleString()}k ÷ ` +
-      `(1 + ${growthPct1}/100) = $${twoYearsAgo.toLocaleString()}k. Stopping after undoing only one year's ` +
-      `growth gives the wrong answer.`
+      `(1 + ${dir2 * growthPct2}/100) = $${twoYearsAgo.toLocaleString()}k. Three years ago = ` +
+      `$${twoYearsAgo.toLocaleString()}k ÷ (1 + ${growthPct1}/100) = $${threeYearsAgo.toLocaleString()}k. ` +
+      `Stopping early, or adding the percentages instead of undoing each year's compounding separately, ` +
+      `both give the wrong answer${dir2 === -1 ? " — and the middle year was a decline, not growth, so it " +
+      "reverses the other way" : ""}.`
   );
 }
 
 function genSecondHighestWithDistraction() {
   const regions = ["Northeast", "Southeast", "Midwest", "Southwest", "West"];
   const shuffledRegions = shuffleInPlace([...regions]);
-  let revenues;
+  let q1Revenues;
   do {
-    revenues = shuffledRegions.map(() => randInt(30, 150) * 10);
-  } while (new Set(revenues).size !== revenues.length);
+    q1Revenues = shuffledRegions.map(() => randInt(30, 150) * 10);
+  } while (new Set(q1Revenues).size !== q1Revenues.length);
 
-  const sortedIdx = revenues.map((_, i) => i).sort((a, b) => revenues[b] - revenues[a]);
+  const growthOptions = [-10, -5, 5, 8, 10, 15, 20, 25];
+  let growthRates;
+  do {
+    growthRates = shuffledRegions.map(() => choice(growthOptions));
+  } while (new Set(growthRates).size !== growthRates.length);
+
+  const q2Revenues = q1Revenues.map((r, i) => Math.round(r * (1 + growthRates[i] / 100)));
+
+  const sortedIdx = q2Revenues.map((_, i) => i).sort((a, b) => q2Revenues[b] - q2Revenues[a]);
+  if (q2Revenues[sortedIdx[0]] === q2Revenues[sortedIdx[1]]) return genSecondHighestWithDistraction(); // avoid an ambiguous tie for first place
+
   const highestIdx = sortedIdx[0];
   const secondIdx = sortedIdx[1];
-  const gap = revenues[highestIdx] - revenues[secondIdx];
+  const gap = q2Revenues[highestIdx] - q2Revenues[secondIdx];
   const headcount = randInt(200, 900);
   const foundedYear = randInt(1998, 2019);
 
+  const q1RankedIdx = q1Revenues.map((_, i) => i).sort((a, b) => q1Revenues[b] - q1Revenues[a]);
+
   const prompt =
-    `A retailer's five regions reported the following quarterly revenue: ` +
-    `${shuffledRegions.map((r, i) => `${r} $${revenues[i].toLocaleString()}k`).join(", ")}. The company, ` +
-    `founded in ${foundedYear}, now employs around ${headcount} people across all regions. What is the ` +
-    `gap in revenue between the highest-performing and second-highest-performing region?`;
+    `A retailer's five regions reported the following Q1 revenue, alongside each region's revenue growth ` +
+    `rate from Q1 to Q2: ` +
+    `${shuffledRegions.map((r, i) => `${r} $${q1Revenues[i].toLocaleString()}k (${growthRates[i] >= 0 ? "+" : ""}${growthRates[i]}%)`).join(", ")}. ` +
+    `The company, founded in ${foundedYear}, now employs around ${headcount} people across all regions. ` +
+    `What is the gap in Q2 revenue between the highest-performing and second-highest-performing region?`;
 
   const distractors = [
-    revenues[highestIdx],
-    revenues[secondIdx],
+    q1Revenues[q1RankedIdx[0]] - q1Revenues[q1RankedIdx[1]], // ranked (and measured) by Q1 revenue instead of Q2
+    Math.abs(q2Revenues[q1RankedIdx[0]] - q2Revenues[q1RankedIdx[1]]), // ranked by Q1, but measured in Q2 dollars
     gap + 10,
     Math.max(gap - 10, 1),
   ];
@@ -676,29 +710,39 @@ function genSecondHighestWithDistraction() {
     gap,
     distractors,
     (v) => `$${Math.round(v).toLocaleString()}k`,
-    `Ranked highest to lowest: ${sortedIdx.map((i) => `${shuffledRegions[i]} ($${revenues[i].toLocaleString()}k)`).join(", ")}. ` +
-      `The headcount and founding year aren't relevant. Gap = $${revenues[highestIdx].toLocaleString()}k − ` +
-      `$${revenues[secondIdx].toLocaleString()}k = $${gap.toLocaleString()}k.`
+    `Q2 revenue = Q1 × (1 + growth rate): ` +
+      `${shuffledRegions.map((r, i) => `${r} $${q2Revenues[i].toLocaleString()}k`).join(", ")}. Ranked highest ` +
+      `to lowest by Q2: ${sortedIdx.map((i) => `${shuffledRegions[i]} ($${q2Revenues[i].toLocaleString()}k)`).join(", ")}. ` +
+      `The headcount and founding year aren't relevant, and ranking by Q1 instead of Q2 picks the wrong ` +
+      `regions. Gap = $${q2Revenues[highestIdx].toLocaleString()}k − $${q2Revenues[secondIdx].toLocaleString()}k ` +
+      `= $${gap.toLocaleString()}k.`
   );
 }
 
 function genUnitConversionTrap() {
-  const dailyCost = randInt(150, 600) * 10;
-  const daysPerWeek = 5;
-  const weeksPerYear = 50;
-  const annualCost = dailyCost * daysPerWeek * weeksPerYear;
+  const fullTimeDailyCost = randInt(150, 400) * 10;
+  const contractorDailyCost = randInt(80, 250) * 10;
+  const weeksPerYear = choice([48, 50, 52]);
+  const fullTimeDaysPerWeek = 5;
+  const contractorDaysPerWeek = 3;
+
+  const fullTimeAnnual = fullTimeDailyCost * fullTimeDaysPerWeek * weeksPerYear;
+  const contractorAnnual = contractorDailyCost * contractorDaysPerWeek * weeksPerYear;
+  const annualCost = fullTimeAnnual + contractorAnnual;
 
   const prompt =
-    `A regional office spends $${dailyCost.toLocaleString()} per business day on logistics. The office ` +
-    `operates ${daysPerWeek} days a week for ${weeksPerYear} weeks a year (it's closed the rest of the ` +
-    `year). What is the annual logistics cost?`;
+    `A regional office pays its full-time staff $${fullTimeDailyCost.toLocaleString()} per business day in ` +
+    `total, and its contractors $${contractorDailyCost.toLocaleString()} per day in total — but contractors ` +
+    `only work ${contractorDaysPerWeek} days a week, not the full working week. Full-time staff work ` +
+    `${fullTimeDaysPerWeek} days a week. The office operates for ${weeksPerYear} weeks a year (it's closed ` +
+    `the rest of the year, for both groups). What is the office's total annual staffing cost?`;
 
-  const distractors = [
-    dailyCost * 365,
-    dailyCost * daysPerWeek * 52,
-    dailyCost * 7 * weeksPerYear,
-    Math.round(annualCost / 12),
-  ];
+  const treatedAllAsFullTime = (fullTimeDailyCost + contractorDailyCost) * fullTimeDaysPerWeek * weeksPerYear; // applied the 5-day week to contractors too
+  const treatedAllAsContractor = (fullTimeDailyCost + contractorDailyCost) * contractorDaysPerWeek * weeksPerYear; // applied the 3-day week to full-time staff too
+  const used52Weeks =
+    fullTimeDailyCost * fullTimeDaysPerWeek * 52 + contractorDailyCost * contractorDaysPerWeek * 52; // ignored the office's actual operating weeks
+  const forgotContractors = fullTimeAnnual; // left the contractors out entirely
+  const distractors = [treatedAllAsFullTime, treatedAllAsContractor, used52Weeks, forgotContractors];
 
   return buildQuestion(
     "Reading carefully: units",
@@ -706,9 +750,46 @@ function genUnitConversionTrap() {
     annualCost,
     distractors,
     (v) => `$${Math.round(v).toLocaleString()}`,
-    `$${dailyCost.toLocaleString()} × ${daysPerWeek} days × ${weeksPerYear} weeks = ` +
-      `$${annualCost.toLocaleString()} per year. Common mistakes: using 365 calendar days, 52 weeks ` +
-      `instead of the office's ${weeksPerYear} operating weeks, or counting weekends.`
+    `Full-time cost per year = $${fullTimeDailyCost.toLocaleString()} × ${fullTimeDaysPerWeek} days × ` +
+      `${weeksPerYear} weeks = $${fullTimeAnnual.toLocaleString()}. Contractor cost per year = ` +
+      `$${contractorDailyCost.toLocaleString()} × ${contractorDaysPerWeek} days × ${weeksPerYear} weeks = ` +
+      `$${contractorAnnual.toLocaleString()}. Total = $${annualCost.toLocaleString()}. Applying one group's ` +
+      `schedule to the other, using 52 weeks instead of the office's ${weeksPerYear}, or dropping the ` +
+      `contractors altogether all give the wrong total.`
+  );
+}
+
+function genThresholdCommission() {
+  const baseSalary = randInt(20, 60) * 100;
+  const threshold = randInt(50, 150) * 100;
+  const totalSales = threshold + randInt(20, 200) * 100;
+  const commissionPct = choice([5, 8, 10, 12, 15]);
+  const excessSales = totalSales - threshold;
+  const commission = Math.round((excessSales * commissionPct) / 100);
+  const totalPay = baseSalary + commission;
+
+  const prompt =
+    `A sales rep earns a monthly base salary of $${baseSalary.toLocaleString()}, plus a ${commissionPct}% ` +
+    `commission — but only on sales above a $${threshold.toLocaleString()} monthly threshold (there is no ` +
+    `commission on the first $${threshold.toLocaleString()} of sales). This month the rep sold ` +
+    `$${totalSales.toLocaleString()}. What is the rep's total pay for the month?`;
+
+  const commissionOnAllSales = baseSalary + Math.round((totalSales * commissionPct) / 100); // applied the rate to every dollar of sales, not just the excess
+  const commissionOnThresholdOnly = baseSalary + Math.round((threshold * commissionPct) / 100); // commissioned the threshold amount instead of the excess over it
+  const forgotBaseSalary = commission; // left out the base salary entirely
+  const distractors = [commissionOnAllSales, commissionOnThresholdOnly, forgotBaseSalary, totalPay + 50];
+
+  return buildQuestion(
+    "Reading carefully: threshold-based pay",
+    prompt,
+    totalPay,
+    distractors,
+    (v) => `$${Math.round(v).toLocaleString()}`,
+    `Commission only applies to the $${excessSales.toLocaleString()} of sales above the ` +
+      `$${threshold.toLocaleString()} threshold: $${excessSales.toLocaleString()} × ${commissionPct}% = ` +
+      `$${commission.toLocaleString()}. Total pay = $${baseSalary.toLocaleString()} base + ` +
+      `$${commission.toLocaleString()} commission = $${totalPay.toLocaleString()}. Applying the commission ` +
+      `rate to the full sales figure, or to the threshold itself, both misstate the true commission.`
   );
 }
 
@@ -733,6 +814,7 @@ const CLOSE_READING_GENERATORS = [
   genReverseGrowth,
   genSecondHighestWithDistraction,
   genUnitConversionTrap,
+  genThresholdCommission,
 ];
 
 /* ---------- question generators (logic games) ---------- */
@@ -759,6 +841,39 @@ function logicGameKey(groups) {
   return groups.map((g) => [...g].sort().join(",")).join("|");
 }
 
+// "Exactly one of X and Y is in group K" — forces looking up both people's
+// actual groups and comparing each to a third, named group, rather than just
+// comparing the two people to each other.
+function buildExactlyOneInGroupConstraint(actualGroups, x, y) {
+  const idxOf = logicGameIndexOf(actualGroups);
+  const ix = idxOf(x);
+  const iy = idxOf(y);
+  if (ix === iy) return null; // "exactly one" can never hold if they're already in the same group
+  const k = choice([ix, iy]);
+  return {
+    check: (gi) => (gi(x) === k) !== (gi(y) === k),
+    describe: (labels) => `Exactly one of ${x} and ${y} is assigned to ${labels.names[k]}.`,
+  };
+}
+
+// "At most one of X, Y, Z is in group K" — a counting rule over three people
+// and one named group, rather than a same/different comparison between two.
+function buildAtMostOneInGroupConstraint(actualGroups, trio) {
+  const idxOf = logicGameIndexOf(actualGroups);
+  for (const k of shuffleInPlace([0, 1, 2])) {
+    const count = trio.filter((p) => idxOf(p) === k).length;
+    // Always satisfiable for some k: three people spread over three groups
+    // can't have two-or-more in every single group at once.
+    if (count <= 1) {
+      return {
+        check: (gi) => trio.filter((p) => gi(p) === k).length <= 1,
+        describe: (labels) => `At most one of ${trio.join(", ")} is assigned to ${labels.names[k]}.`,
+      };
+    }
+  }
+  return null;
+}
+
 function buildLogicGameConstraints(people, groups, ordered) {
   const idxOf = logicGameIndexOf(groups);
   const pairs = [];
@@ -779,33 +894,28 @@ function buildLogicGameConstraints(people, groups, ordered) {
     return pairs[randInt(0, pairs.length - 1)];
   };
 
-  const sameOrDiffConstraint = (x, y) => {
-    const same = idxOf(x) === idxOf(y);
-    return {
-      check: (gi) => (same ? gi(x) === gi(y) : gi(x) !== gi(y)),
-      describe: (labels) =>
-        same ? `${x} and ${y} are in the same ${labels.noun}.` : `${x} and ${y} are not in the same ${labels.noun}.`,
-    };
-  };
-
   const constraints = [];
 
-  const [p1x, p1y] = pickPair();
-  constraints.push(sameOrDiffConstraint(p1x, p1y));
+  let exactlyOne = null;
+  for (let tries = 0; tries < 20 && !exactlyOne; tries++) {
+    const [x, y] = pickPair();
+    exactlyOne = buildExactlyOneInGroupConstraint(groups, x, y);
+  }
+  if (!exactlyOne) exactlyOne = buildExactlyOneInGroupConstraint(groups, groups[0][0], groups[1][0]);
+  constraints.push(exactlyOne);
 
-  const [p2x, p2y] = pickPair();
-  constraints.push(sameOrDiffConstraint(p2x, p2y));
+  const trio = shuffleInPlace([...people]).slice(0, 3);
+  constraints.push(buildAtMostOneInGroupConstraint(groups, trio));
 
   const [p3x, p3y] = pickPair();
-  if (ordered) {
-    const [early, late] = idxOf(p3x) < idxOf(p3y) ? [p3x, p3y] : [p3y, p3x];
-    constraints.push({
-      check: (gi) => gi(early) < gi(late),
-      describe: (labels) => `${early} is scheduled in an earlier ${labels.noun} than ${late}.`,
-    });
-  } else {
-    constraints.push(sameOrDiffConstraint(p3x, p3y));
-  }
+  const [early, late] = idxOf(p3x) < idxOf(p3y) ? [p3x, p3y] : [p3y, p3x];
+  constraints.push({
+    check: (gi) => gi(early) < gi(late),
+    describe: (labels) =>
+      ordered
+        ? `${early} is scheduled in an earlier ${labels.noun} than ${late}.`
+        : `${early} is on a lower-numbered ${labels.noun} than ${late}.`,
+  });
 
   const [p4x, p4y] = pickPair();
   const gx = idxOf(p4x);
