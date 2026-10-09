@@ -76,17 +76,26 @@ python3 -m http.server 8000
   data table — the kind of chart-reading and data-interpretation questions
   used in consulting numerical reasoning tests (Bain SOVA, BCG online test).
 - Every question pairs **two labelled data sources** — two graphs, or a
-  graph and a small table — from the same scenario. Only one is needed to
-  answer; the other is related (same categories or time periods) but a red
-  herring, so part of the test is sifting out what's actually relevant.
-- Covers fifteen question types per attempt: **4 close-reading questions**
-  every time (a one-off item to adjust for, the right months to sum, a
-  ranking question buried in a distracting sentence, or a "which is NOT"
-  negation), plus 11 more sampled from reading a value off a bar or line
-  chart, differences and percentage changes between bars, CAGR and trend
-  forecasting on a line chart, comparing two line series, reading and
-  converting a pie chart share, a stacked bar chart's share of total, table
-  averages, growth rates, ratios/margins, and a weighted average.
+  graph and a small table — from the same scenario. Around half the
+  questions genuinely need both (a rate from one source and a base from the
+  other, a share and a total, two related series) to compute the answer;
+  the rest need only one, paired with a plausible financial or operational
+  companion (cost, price, units, prior-year revenue, growth rate, budget —
+  never an unrelated filler stat) that simply isn't needed for that
+  particular calculation. Either way, which source matters isn't given away
+  by its content, any label, or always appearing first.
+- Covers question types including: units × price, revenue minus cost into a
+  margin, revenue ÷ units into a price point, a pie share blended against a
+  margin table, a pie share applied to a total from a separate table, a
+  growth rate applied to a prior-year base, finding peak profit from
+  separate revenue and cost sources, two-period percentage change, CAGR
+  from a chart or a table, a stacked chart's share-of-total change,
+  comparing a store's average against the overall average, and compound
+  trend forecasting — plus **4 close-reading questions** every time (a
+  one-off item to adjust for, the right months to sum, a ranking question
+  with a plausible-but-unneeded companion chart, or a "which is NOT"
+  negation that requires computing every option from two sources rather
+  than reading one value off a threshold).
 - Shows a **countdown timer** against a **recommended completion time of
   18:00** (about 72 seconds per question). The test auto-submits if time
   runs out.
@@ -94,10 +103,9 @@ python3 -m http.server 8000
   selected, a full review (with the original chart or table alongside each
   worked explanation) is shown at the end, and a line graph tracks your score
   out of 15 across every attempt on this device.
-- Most questions require locating two figures and combining them (a
-  two-period change, a gap between categories, a weighted or compounded
-  rate) rather than a single direct read, and chart/table values are kept
-  deliberately non-round.
+- Numbers are kept deliberately non-round so they can't be estimated at a
+  glance, and no question reduces to a single direct read or a plain
+  subtraction of two displayed values.
 
 ## Files
 

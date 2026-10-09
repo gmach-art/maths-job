@@ -511,166 +511,417 @@ function renderMultiPanel(container, panelRenderers) {
   });
 }
 
-/* ---------- secondary data panels ---------- */
-/* These build a second chart or table from the same scenario (same
-   categories/periods) that is related to the question but never actually
-   needed to answer it — presented exactly like the primary panel, with no
-   tell, so noticing that is itself part of the challenge. Each is
-   deterministic in shape, randomised in value. */
+/* ---------- companion data panels ---------- */
+/* A second chart or table from the same scenario (same categories/periods),
+   always drawn from genuinely financial/operational metrics — cost, price,
+   units, prior-year revenue, growth rate, budget — the same vocabulary used
+   when a question's calculation actually needs a second source. Sometimes
+   this panel is required; sometimes it isn't, and which role it plays isn't
+   given away by its content, position, or any label. */
 
-function panelHeadcountTable(categories, categoryNoun) {
-  const rows = categories.map((c) => [c, String(randInt(40, 420))]);
+function panelValueTable(categories, categoryNoun, metricLabel, min, max, formatFn) {
+  const rows = categories.map((c) => [c, formatFn(randInt(min, max))]);
   return (container) =>
     renderDataTable(container, {
-      title: `Headcount by ${categoryNoun}`,
-      columns: [categoryNoun, "Employees"],
+      title: `${metricLabel} by ${categoryNoun}`,
+      columns: [categoryNoun, metricLabel],
       rows,
     });
 }
 
-function panelFoundingYearTable(entities, entityNoun) {
-  const rows = entities.map((e) => [e, String(randInt(1975, 2021))]);
-  return (container) =>
-    renderDataTable(container, {
-      title: `${entityNoun} founding year`,
-      columns: [entityNoun, "Founded"],
-      rows,
-    });
-}
-
-function panelSatisfactionLine(periods) {
-  const values = periods.map(() => randInt(58, 96));
-  return (container) =>
-    renderLineChart(container, {
-      title: "Customer satisfaction score (out of 100)",
-      periods,
-      series: [{ label: "Satisfaction", values, colorVar: "var(--series-3)" }],
-      valueFormat: (v) => `${Math.round(v)}`,
-    });
-}
-
-function panelBudgetBar(categories, categoryNoun) {
-  const values = categories.map(() => randInt(40, 320));
+function panelValueBar(categories, categoryNoun, metricLabel, min, max, formatFn) {
+  const values = categories.map(() => randInt(min, max));
   return (container) =>
     renderBarChart(container, {
-      title: `Marketing budget ($000s) by ${categoryNoun}`,
+      title: `${metricLabel} by ${categoryNoun}`,
       categories,
       values,
-      valueFormat: (v) => `$${Math.round(v)}k`,
+      valueFormat: formatFn,
     });
 }
 
-function panelPriceTable(entities, entityNoun) {
-  const rows = entities.map((e) => [e, `$${randInt(8, 240)}`]);
-  return (container) =>
-    renderDataTable(container, {
-      title: `${entityNoun} list price`,
-      columns: [entityNoun, "List price"],
-      rows,
-    });
+function pickCompanionPanel(categories, categoryNoun) {
+  const options = [
+    () => panelValueTable(categories, categoryNoun, "Cost ($m)", 20, 400, (v) => `$${v}m`),
+    () => panelValueTable(categories, categoryNoun, "Price per unit ($)", 8, 120, (v) => `$${v}`),
+    () => panelValueBar(categories, categoryNoun, "Units sold (000s)", 30, 600, (v) => `${v}k`),
+    () => panelValueTable(categories, categoryNoun, "Prior-year revenue ($m)", 20, 400, (v) => `$${v}m`),
+    () => panelValueBar(categories, categoryNoun, "YoY growth rate (%)", -10, 35, (v) => `${v > 0 ? "+" : ""}${v}%`),
+    () => panelValueBar(categories, categoryNoun, "Operating budget ($m)", 10, 250, (v) => `$${v}m`),
+  ];
+  return choice(options)();
 }
 
-function panelWebsiteVisitsBar(periods) {
-  const values = periods.map(() => randInt(12, 95) * 10);
-  return (container) =>
-    renderBarChart(container, {
-      title: "Website visits (000s)",
-      categories: periods,
-      values,
-      valueFormat: (v) => `${Math.round(v)}k`,
-    });
-}
-
-function panelSquareFootageTable(entities, entityNoun) {
-  const rows = entities.map((e) => [e, `${randInt(4, 38) * 500} sq ft`]);
-  return (container) =>
-    renderDataTable(container, {
-      title: `${entityNoun} floor area`,
-      columns: [entityNoun, "Floor area"],
-      rows,
-    });
+/** Renders two panels in a random order, so whichever one is actually needed
+ * to answer the question isn't always the one shown first. */
+function renderTwoPanelsRandomOrder(container, panelA, panelB) {
+  const panels = Math.random() < 0.5 ? [panelA, panelB] : [panelB, panelA];
+  renderMultiPanel(container, panels);
 }
 
 /* ---------- question generators ---------- */
-/* Every generator builds a fresh chart or table with randomised numbers and
-   a question about it, covering the kinds of data-analysis questions used in
+/* Every generator builds two fresh, labelled data panels and a question
+   about them, covering the kinds of data-analysis questions used in
    consulting numerical reasoning tests (Bain SOVA, BCG online test, etc.).
-   Most require at least two reasoning steps (locate two figures, then
-   combine them) rather than a single direct read, and numbers are kept
+   About half require combining BOTH panels (a rate from one and a base from
+   the other, a share and a total, two related series); the rest need only
+   one, with a plausible financial companion alongside it. Numbers are kept
    deliberately non-round so they can't be estimated at a glance. */
 
-function genBarReadValue() {
-  const categories = ["Q1 '24", "Q2 '24", "Q3 '24", "Q4 '24", "Q1 '25", "Q2 '25"];
-  const values = categories.map(() => randInt(37, 128));
-  const idx = randInt(0, categories.length - 1);
-  const correct = values[idx];
+function genRevenueFromUnitsPrice() {
+  const products = ["Product A", "Product B", "Product C", "Product D", "Product E"];
+  const units = products.map(() => randInt(40, 220));
+  const prices = products.map(() => randInt(15, 90));
+  const idx = randInt(0, products.length - 1);
+  const otherIdx = (idx + 1) % products.length;
+  const correct = units[idx] * prices[idx];
 
   const prompt =
-    `The chart shows quarterly revenue ($m) for a retail chain. What was revenue in ${categories[idx]}?`;
+    `The chart shows units sold (000s) by product. The table shows the price per unit ($) by product. What ` +
+    `was total revenue for ${products[idx]}, in $000s?`;
 
-  const distractors = [...values.filter((_, i) => i !== idx), correct + 4, correct - 4];
+  const distractors = [
+    units[idx] * prices[otherIdx],
+    units[otherIdx] * prices[idx],
+    Math.round(correct * 1.15),
+    Math.round(correct * 0.85),
+  ];
 
   const q = buildQuestion(
-    "Bar chart: reading a value",
+    "Combining two sources: units × price",
+    prompt,
+    correct,
+    distractors,
+    (v) => `$${Math.round(v).toLocaleString()}k`,
+    `${products[idx]}: ${units[idx]}k units × $${prices[idx]} per unit = $${correct.toLocaleString()}k.`
+  );
+
+  return withChart(q, (container) =>
+    renderTwoPanelsRandomOrder(
+      container,
+      (c) =>
+        renderBarChart(c, {
+          title: "Units sold (000s) by product",
+          categories: products,
+          values: units,
+          valueFormat: (v) => `${Math.round(v)}k`,
+        }),
+      (c) =>
+        renderDataTable(c, {
+          title: "Price per unit ($) by product",
+          columns: ["Product", "Price"],
+          rows: products.map((p, i) => [p, `$${prices[i]}`]),
+        })
+    )
+  );
+}
+
+function genMarginFromRevenueCost() {
+  const divisions = ["Retail", "Corporate", "Wholesale", "Digital", "International"];
+  const revenue = divisions.map(() => randInt(37, 197));
+  const cost = revenue.map((r) => Math.round(r * (randInt(55, 92) / 100)));
+  const idx = randInt(0, divisions.length - 1);
+  const profit = revenue[idx] - cost[idx];
+  const margin = round1((profit / revenue[idx]) * 100);
+
+  const prompt =
+    `The chart shows revenue ($m) by division. The table shows cost ($m) by division. What was the profit ` +
+    `margin for ${divisions[idx]} (profit as a percentage of revenue), to 1 decimal place?`;
+
+  const distractors = [
+    round1((cost[idx] / revenue[idx]) * 100),
+    round1(margin + 6),
+    round1(Math.max(margin - 6, 1)),
+    round1((profit / cost[idx]) * 100),
+  ];
+
+  const q = buildQuestion(
+    "Combining two sources: margin",
+    prompt,
+    margin,
+    distractors,
+    (v) => `${v.toFixed(1)}%`,
+    `${divisions[idx]}: revenue $${revenue[idx]}m − cost $${cost[idx]}m = profit $${profit}m. Margin = ` +
+      `$${profit}m ÷ $${revenue[idx]}m × 100 = ${margin.toFixed(1)}%.`
+  );
+
+  return withChart(q, (container) =>
+    renderTwoPanelsRandomOrder(
+      container,
+      (c) =>
+        renderBarChart(c, {
+          title: "Revenue ($m) by division",
+          categories: divisions,
+          values: revenue,
+          valueFormat: (v) => `$${Math.round(v)}m`,
+        }),
+      (c) =>
+        renderDataTable(c, {
+          title: "Cost ($m) by division",
+          columns: ["Division", "Cost"],
+          rows: divisions.map((d, i) => [d, `$${cost[i]}m`]),
+        })
+    )
+  );
+}
+
+function genPricePerUnitFromRevenueUnits() {
+  const stores = ["Store 1", "Store 2", "Store 3", "Store 4", "Store 5"];
+  const revenue = stores.map(() => randInt(180, 920));
+  const units = stores.map(() => randInt(2500, 9500));
+  const idx = randInt(0, stores.length - 1);
+  const otherIdx = (idx + 1) % stores.length;
+  const correct = round1((revenue[idx] * 1000) / units[idx]);
+
+  const prompt =
+    `The chart shows revenue ($000s) by store. The table shows units sold by store. What was the average ` +
+    `price per unit at ${stores[idx]}, to the nearest cent?`;
+
+  const distractors = [
+    round1((revenue[otherIdx] * 1000) / units[idx]),
+    round1((revenue[idx] * 1000) / units[otherIdx]),
+    round1(correct + 5),
+    round1(Math.max(correct - 5, 0.5)),
+  ];
+
+  const q = buildQuestion(
+    "Combining two sources: price per unit",
+    prompt,
+    correct,
+    distractors,
+    (v) => `$${v.toFixed(2)}`,
+    `${stores[idx]}: $${revenue[idx]}k revenue ÷ ${units[idx].toLocaleString()} units = $${correct.toFixed(2)} ` +
+      `per unit.`
+  );
+
+  return withChart(q, (container) =>
+    renderTwoPanelsRandomOrder(
+      container,
+      (c) =>
+        renderBarChart(c, {
+          title: "Revenue ($000s) by store",
+          categories: stores,
+          values: revenue,
+          valueFormat: (v) => `$${Math.round(v)}k`,
+        }),
+      (c) =>
+        renderDataTable(c, {
+          title: "Units sold by store",
+          columns: ["Store", "Units"],
+          rows: stores.map((s, i) => [s, units[i].toLocaleString()]),
+        })
+    )
+  );
+}
+
+function genBlendedMarginFromShareAndMargin() {
+  const segments = ["Retail", "Corporate", "Online", "Wholesale"];
+  let shares;
+  do {
+    const raw = segments.map(() => randInt(10, 45));
+    const sum = raw.reduce((a, b) => a + b, 0);
+    shares = raw.map((v) => Math.round((v / sum) * 100));
+    shares[0] += 100 - shares.reduce((a, b) => a + b, 0);
+  } while (shares.some((s) => s <= 0));
+  const margins = segments.map(() => randInt(4, 38));
+
+  const weighted = round1(segments.reduce((sum, _, i) => sum + (shares[i] / 100) * margins[i], 0));
+  const simpleAvg = round1(margins.reduce((a, b) => a + b, 0) / margins.length);
+
+  const prompt =
+    `The pie chart shows each segment's share of company revenue. The table shows each segment's profit ` +
+    `margin. What is the company's overall profit margin, weighted by revenue share, to 1 decimal place?`;
+
+  const distractors = [simpleAvg, round1(weighted + 3), round1(Math.max(weighted - 3, 1)), Math.max(...margins)];
+
+  const q = buildQuestion(
+    "Combining two sources: weighted average",
+    prompt,
+    weighted,
+    distractors,
+    (v) => `${v.toFixed(1)}%`,
+    `Weighted margin = ${segments.map((s, i) => `${shares[i]}%×${margins[i]}%`).join(" + ")} = ${weighted.toFixed(1)}%.`
+  );
+
+  return withChart(q, (container) =>
+    renderTwoPanelsRandomOrder(
+      container,
+      (c) =>
+        renderPieChart(c, {
+          title: "Revenue share by segment",
+          segments: segments.map((label, i) => ({ label, value: shares[i] })),
+          sliceLabelFormat: (v) => `${Math.round(v)}%`,
+        }),
+      (c) =>
+        renderDataTable(c, {
+          title: "Profit margin by segment",
+          columns: ["Segment", "Margin"],
+          rows: segments.map((s, i) => [s, `${margins[i]}%`]),
+        })
+    )
+  );
+}
+
+function genCompanyRevenueFromShareAndMarketSize() {
+  const segments = ["Consumer", "Enterprise", "Government", "International", "Other"];
+  let shares;
+  do {
+    const raw = segments.map(() => randInt(6, 32));
+    const sum = raw.reduce((a, b) => a + b, 0);
+    shares = raw.map((v) => Math.round((v / sum) * 100));
+    shares[0] += 100 - shares.reduce((a, b) => a + b, 0);
+  } while (shares.some((s) => s <= 0));
+
+  const years = ["2022", "2023", "2024"];
+  const totalRevenue = [randInt(230, 870)];
+  for (let i = 1; i < years.length; i++) {
+    totalRevenue.push(Math.round(totalRevenue[i - 1] * (1 + randInt(2, 18) / 100)));
+  }
+  const yIdx = randInt(0, years.length - 1);
+  const idx = randInt(0, segments.length - 1);
+  const otherIdx = (idx + 1) % segments.length;
+  const correct = Math.round((shares[idx] / 100) * totalRevenue[yIdx]);
+
+  const prompt =
+    `The pie chart shows the current breakdown of total revenue by segment. The table shows total company ` +
+    `revenue ($m) by year. Assuming the same breakdown applied in ${years[yIdx]}, what was the approximate ` +
+    `${segments[idx]} segment's revenue that year?`;
+
+  const distractors = [
+    Math.round((shares[otherIdx] / 100) * totalRevenue[yIdx]),
+    Math.round((shares[idx] / 100) * totalRevenue[(yIdx + 1) % years.length]),
+    Math.round(correct * 1.2),
+    Math.round(correct * 0.8),
+  ];
+
+  const q = buildQuestion(
+    "Combining two sources: share × total",
     prompt,
     correct,
     distractors,
     (v) => `$${Math.round(v)}m`,
-    `Reading directly from the ${categories[idx]} bar: revenue was $${correct}m.`
+    `${years[yIdx]} total revenue = $${totalRevenue[yIdx]}m. ${segments[idx]} = ${shares[idx]}% × ` +
+      `$${totalRevenue[yIdx]}m = $${correct}m.`
   );
 
   return withChart(q, (container) =>
-    renderMultiPanel(container, [
+    renderTwoPanelsRandomOrder(
+      container,
       (c) =>
-        renderBarChart(c, {
-          title: "Quarterly revenue ($m)",
-          categories,
-          values,
-          valueFormat: (v) => `$${Math.round(v)}m`,
+        renderPieChart(c, {
+          title: "Revenue breakdown by segment",
+          segments: segments.map((label, i) => ({ label, value: shares[i] })),
+          sliceLabelFormat: (v) => `${Math.round(v)}%`,
         }),
-      panelHeadcountTable(categories, "Quarter"),
-    ])
+      (c) =>
+        renderDataTable(c, {
+          title: "Total company revenue ($m) by year",
+          columns: ["Year", "Revenue"],
+          rows: years.map((y, i) => [y, `$${totalRevenue[i]}m`]),
+        })
+    )
   );
 }
 
-function genBarDifference() {
-  const regions = ["North", "South", "East", "West", "Central", "Overseas"];
-  const values = regions.map(() => randInt(187, 931));
-  let maxI = 0;
-  let minI = 0;
-  values.forEach((v, i) => {
-    if (v > values[maxI]) maxI = i;
-    if (v < values[minI]) minI = i;
-  });
-  const diff = values[maxI] - values[minI];
+function genAbsoluteGrowthFromRateAndBase() {
+  const regions = ["North", "South", "East", "West", "Central"];
+  const growthPct = regions.map(() => randInt(-12, 32));
+  const priorRevenue = regions.map(() => randInt(180, 920));
+  const idx = randInt(0, regions.length - 1);
+  const dollarGrowth = Math.round(priorRevenue[idx] * (growthPct[idx] / 100));
 
   const prompt =
-    `The chart shows annual sales ($000s) by region. By how much did ${regions[maxI]} sales exceed ` +
-    `${regions[minI]} sales?`;
+    `The chart shows year-on-year revenue growth (%) by region. The table shows last year's revenue ($000s) ` +
+    `by region. What was ${regions[idx]}'s absolute change in revenue this year, in $000s?`;
 
-  const distractors = [values[maxI] + values[minI], Math.round(diff * 1.15), Math.round(diff * 0.85), diff + 10];
+  const distractors = [
+    priorRevenue[idx],
+    Math.round(priorRevenue[idx] * (1 + growthPct[idx] / 100)),
+    Math.round(dollarGrowth * 1.3),
+    Math.round(dollarGrowth * 0.7),
+  ];
 
   const q = buildQuestion(
-    "Bar chart: difference between categories",
+    "Combining two sources: growth in dollars",
     prompt,
-    diff,
+    dollarGrowth,
     distractors,
-    (v) => `$${Math.round(v)}k`,
-    `${regions[maxI]} = $${values[maxI]}k, ${regions[minI]} = $${values[minI]}k. Difference = $${values[maxI]}k − ` +
-      `$${values[minI]}k = $${diff}k.`
+    (v) => `${v > 0 ? "+" : ""}$${Math.round(v)}k`,
+    `${regions[idx]}: $${priorRevenue[idx]}k × ${growthPct[idx]}% = ${dollarGrowth > 0 ? "+" : ""}$${dollarGrowth}k.`
   );
 
   return withChart(q, (container) =>
-    renderMultiPanel(container, [
+    renderTwoPanelsRandomOrder(
+      container,
       (c) =>
         renderBarChart(c, {
-          title: "Annual sales ($000s) by region",
+          title: "Year-on-year revenue growth (%) by region",
           categories: regions,
-          values,
-          valueFormat: (v) => `$${Math.round(v)}k`,
+          values: growthPct,
+          valueFormat: (v) => `${v > 0 ? "+" : ""}${Math.round(v)}%`,
         }),
-      panelHeadcountTable(regions, "Region"),
-    ])
+      (c) =>
+        renderDataTable(c, {
+          title: "Last year's revenue ($000s) by region",
+          columns: ["Region", "Revenue"],
+          rows: regions.map((r, i) => [r, `$${priorRevenue[i]}k`]),
+        })
+    )
+  );
+}
+
+function genPeakProfitFromRevenueAndCosts() {
+  const startYear = randInt(2019, 2021);
+  const years = [0, 1, 2, 3, 4].map((i) => String(startYear + i));
+  const revenue = [randInt(60, 100)];
+  const costs = [Math.round(revenue[0] * (0.6 + Math.random() * 0.25))];
+  for (let i = 1; i < years.length; i++) {
+    revenue.push(revenue[i - 1] + randInt(-5, 20));
+    costs.push(Math.max(5, costs[i - 1] + randInt(-8, 15)));
+  }
+  const profits = years.map((_, i) => revenue[i] - costs[i]);
+  const sortedProfits = [...profits].sort((a, b) => b - a);
+  if (sortedProfits[0] === sortedProfits[1]) return genPeakProfitFromRevenueAndCosts(); // avoid an ambiguous tie
+
+  let bestIdx = 0;
+  profits.forEach((p, i) => {
+    if (p > profits[bestIdx]) bestIdx = i;
+  });
+  const peakProfit = profits[bestIdx];
+
+  const prompt =
+    `The chart shows annual revenue ($m) by year. The table shows annual costs ($m) by year. What was ` +
+    `profit (revenue minus costs) in the year it peaked?`;
+
+  const distractors = [...profits.filter((_, i) => i !== bestIdx), peakProfit + 5, peakProfit - 5];
+
+  const q = buildQuestion(
+    "Combining two sources: peak profit",
+    prompt,
+    peakProfit,
+    distractors,
+    (v) => `$${Math.round(v)}m`,
+    `Profit each year = revenue − costs: ${years.map((y, i) => `${y}: $${profits[i]}m`).join(", ")}. The highest ` +
+      `is ${years[bestIdx]} at $${peakProfit}m.`
+  );
+
+  return withChart(q, (container) =>
+    renderTwoPanelsRandomOrder(
+      container,
+      (c) =>
+        renderLineChart(c, {
+          title: "Annual revenue ($m)",
+          periods: years,
+          series: [{ label: "Revenue", values: revenue, colorVar: "var(--series-1)" }],
+          valueFormat: (v) => `$${Math.round(v)}m`,
+        }),
+      (c) =>
+        renderDataTable(c, {
+          title: "Annual costs ($m) by year",
+          columns: ["Year", "Costs"],
+          rows: years.map((y, i) => [y, `$${costs[i]}m`]),
+        })
+    )
   );
 }
 
@@ -705,7 +956,8 @@ function genBarPercentChange() {
   );
 
   return withChart(q, (container) =>
-    renderMultiPanel(container, [
+    renderTwoPanelsRandomOrder(
+      container,
       (c) =>
         renderBarChart(c, {
           title: `Annual revenue ($m), ${years[0]}–${years[years.length - 1]}`,
@@ -713,48 +965,8 @@ function genBarPercentChange() {
           values,
           valueFormat: (v) => `$${Math.round(v)}m`,
         }),
-      panelSatisfactionLine(years),
-    ])
-  );
-}
-
-function genLineTrendRead() {
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"];
-  const values = [randInt(83, 147)];
-  for (let i = 1; i < months.length; i++) {
-    values.push(Math.max(10, values[i - 1] + randInt(-17, 28)));
-  }
-  const idx1 = randInt(0, months.length - 2);
-  const idx2 = randInt(idx1 + 1, months.length - 1);
-  const change = values[idx2] - values[idx1];
-
-  const prompt =
-    `The chart shows monthly active users (000s) for an app. By how many thousand did active users change ` +
-    `from ${months[idx1]} to ${months[idx2]}?`;
-
-  const distractors = [values[idx2], values[idx1], change + 8, change - 8];
-
-  const q = buildQuestion(
-    "Line chart: reading the change",
-    prompt,
-    change,
-    distractors,
-    (v) => `${v > 0 ? "+" : ""}${Math.round(v)}k`,
-    `${months[idx1]} = ${values[idx1]}k, ${months[idx2]} = ${values[idx2]}k. Change = ${values[idx2]}k − ` +
-      `${values[idx1]}k = ${change > 0 ? "+" : ""}${change}k.`
-  );
-
-  return withChart(q, (container) =>
-    renderMultiPanel(container, [
-      (c) =>
-        renderLineChart(c, {
-          title: "Monthly active users (000s)",
-          periods: months,
-          series: [{ label: "Active users", values, colorVar: "var(--series-1)" }],
-          valueFormat: (v) => `${Math.round(v)}k`,
-        }),
-      panelBudgetBar(months, "month"),
-    ])
+      pickCompanionPanel(years, "Year")
+    )
   );
 }
 
@@ -784,7 +996,8 @@ function genLineCAGR() {
   );
 
   return withChart(q, (container) =>
-    renderMultiPanel(container, [
+    renderTwoPanelsRandomOrder(
+      container,
       (c) =>
         renderLineChart(c, {
           title: `Company valuation ($m), ${years[0]}–${years[years.length - 1]}`,
@@ -792,152 +1005,8 @@ function genLineCAGR() {
           series: [{ label: "Valuation", values, colorVar: "var(--series-1)" }],
           valueFormat: (v) => `$${Math.round(v)}m`,
         }),
-      panelHeadcountTable(years, "Year"),
-    ])
-  );
-}
-
-function genLineTwoSeries() {
-  const startYear = randInt(2019, 2021);
-  const years = [0, 1, 2, 3, 4].map((i) => String(startYear + i));
-  const revenue = [randInt(60, 100)];
-  const costs = [Math.round(revenue[0] * (0.6 + Math.random() * 0.25))];
-  for (let i = 1; i < years.length; i++) {
-    revenue.push(revenue[i - 1] + randInt(-5, 20));
-    costs.push(Math.max(5, costs[i - 1] + randInt(-8, 15)));
-  }
-  const profits = years.map((_, i) => revenue[i] - costs[i]);
-  const sortedProfits = [...profits].sort((a, b) => b - a);
-  if (sortedProfits[0] === sortedProfits[1]) return genLineTwoSeries(); // avoid an ambiguous tie
-
-  let bestIdx = 0;
-  profits.forEach((p, i) => {
-    if (p > profits[bestIdx]) bestIdx = i;
-  });
-  const peakProfit = profits[bestIdx];
-
-  const prompt =
-    `The chart shows annual revenue and costs ($m) for a business. What was profit (revenue minus costs) ` +
-    `in the year it peaked?`;
-
-  const distractors = [...profits.filter((_, i) => i !== bestIdx), peakProfit + 5, peakProfit - 5];
-
-  const q = buildQuestion(
-    "Line chart: two series",
-    prompt,
-    peakProfit,
-    distractors,
-    (v) => `$${Math.round(v)}m`,
-    `Profit each year = revenue − costs: ${years.map((y, i) => `${y}: $${profits[i]}m`).join(", ")}. The highest ` +
-      `is ${years[bestIdx]} at $${peakProfit}m.`
-  );
-
-  return withChart(q, (container) =>
-    renderMultiPanel(container, [
-      (c) =>
-        renderLineChart(c, {
-          title: "Revenue vs. costs ($m)",
-          periods: years,
-          series: [
-            { label: "Revenue", values: revenue, colorVar: "var(--series-1)" },
-            { label: "Costs", values: costs, colorVar: "var(--series-2)" },
-          ],
-          valueFormat: (v) => `$${Math.round(v)}m`,
-        }),
-      panelSatisfactionLine(years),
-    ])
-  );
-}
-
-function genPieShare() {
-  const companies = ["Alpha Co", "Beta Inc", "Gamma Ltd", "Delta Group", "Epsilon Corp"];
-  let shares;
-  do {
-    const raw = companies.map(() => randInt(4, 38));
-    const sum = raw.reduce((a, b) => a + b, 0);
-    shares = raw.map((v) => Math.round((v / sum) * 100));
-    shares[0] += 100 - shares.reduce((a, b) => a + b, 0);
-  } while (shares.some((s) => s <= 0));
-
-  const idxA = randInt(0, companies.length - 1);
-  let idxB = randInt(0, companies.length - 1);
-  while (idxB === idxA) idxB = randInt(0, companies.length - 1);
-  const gap = Math.abs(shares[idxA] - shares[idxB]);
-
-  const prompt =
-    `The chart shows market share by company in the industry. What is the difference in market share ` +
-    `between ${companies[idxA]} and ${companies[idxB]}?`;
-
-  const distractors = [shares[idxA], shares[idxB], gap + 4, Math.max(gap - 4, 1)];
-
-  const q = buildQuestion(
-    "Pie chart: reading a share",
-    prompt,
-    gap,
-    distractors,
-    (v) => `${Math.round(v)} pts`,
-    `${companies[idxA]} = ${shares[idxA]}%, ${companies[idxB]} = ${shares[idxB]}%. Difference = ` +
-      `|${shares[idxA]} − ${shares[idxB]}| = ${gap} points.`
-  );
-
-  return withChart(q, (container) =>
-    renderMultiPanel(container, [
-      (c) =>
-        renderPieChart(c, {
-          title: "Market share by company",
-          segments: companies.map((label, i) => ({ label, value: shares[i] })),
-          sliceLabelFormat: (value) => `${Math.round(value)}%`,
-        }),
-      panelFoundingYearTable(companies, "Company"),
-    ])
-  );
-}
-
-function genPieToValue() {
-  const segments = ["Consumer", "Enterprise", "Government", "International", "Other"];
-  let shares;
-  do {
-    const raw = segments.map(() => randInt(6, 32));
-    const sum = raw.reduce((a, b) => a + b, 0);
-    shares = raw.map((v) => Math.round((v / sum) * 100));
-    shares[0] += 100 - shares.reduce((a, b) => a + b, 0);
-  } while (shares.some((s) => s <= 0));
-
-  const totalMarket = randInt(230, 870);
-  const idx = randInt(0, segments.length - 1);
-  const correct = Math.round((shares[idx] / 100) * totalMarket);
-
-  const prompt =
-    `The chart shows the breakdown of a company's $${totalMarket}m total revenue by segment. What is the ` +
-    `approximate revenue of the ${segments[idx]} segment?`;
-
-  const otherIdx = (idx + 1) % segments.length;
-  const distractors = [
-    Math.round((shares[idx] / 100) * totalMarket * 1.2),
-    Math.round((shares[otherIdx] / 100) * totalMarket),
-    Math.round(totalMarket / segments.length),
-    correct + 10,
-  ];
-
-  const q = buildQuestion(
-    "Pie chart: share to absolute value",
-    prompt,
-    correct,
-    distractors,
-    (v) => `$${Math.round(v)}m`,
-    `${segments[idx]} = ${shares[idx]}% of $${totalMarket}m = $${correct}m.`
-  );
-
-  return withChart(q, (container) =>
-    renderMultiPanel(container, [
-      (c) =>
-        renderPieChart(c, {
-          title: `Revenue breakdown by segment (total $${totalMarket}m)`,
-          segments: segments.map((label, i) => ({ label, value: shares[i] })),
-          sliceLabelFormat: (value) => `${Math.round(value)}%`,
-        }),
-      panelHeadcountTable(segments, "Segment"),
-    ])
+      pickCompanionPanel(years, "Year")
+    )
   );
 }
 
@@ -980,7 +1049,8 @@ function genStackedBar() {
   );
 
   return withChart(q, (container) =>
-    renderMultiPanel(container, [
+    renderTwoPanelsRandomOrder(
+      container,
       (c) =>
         renderStackedBarChart(c, {
           title: "Revenue ($m) by product line",
@@ -988,8 +1058,8 @@ function genStackedBar() {
           series,
           valueFormat: (v) => `$${Math.round(v)}m`,
         }),
-      panelPriceTable(products, "Product"),
-    ])
+      pickCompanionPanel(products, "Product")
+    )
   );
 }
 
@@ -1022,15 +1092,16 @@ function genTableAverage() {
   );
 
   return withChart(q, (container) =>
-    renderMultiPanel(container, [
+    renderTwoPanelsRandomOrder(
+      container,
       (c) =>
         renderDataTable(c, {
           title: "Quarterly sales ($000s) by store",
           columns: ["Store", ...quarters],
           rows: stores.map((s, i) => [s, ...data[i].map((v) => `$${v}k`)]),
         }),
-      panelSquareFootageTable(stores, "Store"),
-    ])
+      pickCompanionPanel(stores, "Store")
+    )
   );
 }
 
@@ -1063,144 +1134,16 @@ function genTableGrowthRate() {
   );
 
   return withChart(q, (container) =>
-    renderMultiPanel(container, [
+    renderTwoPanelsRandomOrder(
+      container,
       (c) =>
         renderDataTable(c, {
           title: "Units sold by product",
           columns: ["Product", "Year 1", "Year 2", "Year 3"],
           rows: products.map((p, i) => [p, String(year1[i]), String(year2[i]), String(year3[i])]),
         }),
-      panelPriceTable(products, "Product"),
-    ])
-  );
-}
-
-function genTableRatio() {
-  const divisions = ["Retail", "Corporate", "Wholesale", "Digital", "International"];
-  const revenue = divisions.map(() => randInt(37, 197));
-  const profit = revenue.map((r) => Math.round(r * (randInt(4, 38) / 100)));
-  const margins = divisions.map((_, i) => round1((profit[i] / revenue[i]) * 100));
-
-  let bestIdx = 0;
-  let worstIdx = 0;
-  margins.forEach((m, i) => {
-    if (m > margins[bestIdx]) bestIdx = i;
-    if (m < margins[worstIdx]) worstIdx = i;
-  });
-  const gap = round1(margins[bestIdx] - margins[worstIdx]);
-
-  const prompt =
-    `The table shows revenue and profit ($m) by division. What is the gap in profit margin between the ` +
-    `division with the highest margin and the division with the lowest margin?`;
-
-  const distractors = [round1(margins[bestIdx]), round1(margins[worstIdx]), round1(gap + 5), round1(Math.max(gap - 5, 1))];
-
-  const q = buildQuestion(
-    "Data table: ratio / margin",
-    prompt,
-    gap,
-    distractors,
-    (v) => `${v.toFixed(1)} pts`,
-    `Margins: ${divisions.map((d, i) => `${d} ${margins[i].toFixed(1)}%`).join(", ")}. Highest = ` +
-      `${divisions[bestIdx]} (${margins[bestIdx].toFixed(1)}%), lowest = ${divisions[worstIdx]} ` +
-      `(${margins[worstIdx].toFixed(1)}%). Gap = ${gap.toFixed(1)} points.`
-  );
-
-  return withChart(q, (container) =>
-    renderMultiPanel(container, [
-      (c) =>
-        renderDataTable(c, {
-          title: "Revenue and profit ($m) by division",
-          columns: ["Division", "Revenue", "Profit"],
-          rows: divisions.map((d, i) => [d, `$${revenue[i]}m`, `$${profit[i]}m`]),
-        }),
-      panelHeadcountTable(divisions, "Division"),
-    ])
-  );
-}
-
-function genTableWeightedAvg() {
-  const segments = ["Retail", "Corporate", "Online", "Wholesale"];
-  let shares;
-  do {
-    const raw = segments.map(() => randInt(10, 45));
-    const sum = raw.reduce((a, b) => a + b, 0);
-    shares = raw.map((v) => Math.round((v / sum) * 100));
-    shares[0] += 100 - shares.reduce((a, b) => a + b, 0);
-  } while (shares.some((s) => s <= 0));
-  const margins = segments.map(() => randInt(4, 38));
-
-  const weighted = round1(segments.reduce((sum, _, i) => sum + (shares[i] / 100) * margins[i], 0));
-
-  const prompt =
-    `The table shows each segment's share of company revenue and its profit margin. What is the company's ` +
-    `overall profit margin, weighted by revenue share, to 1 decimal place?`;
-
-  const simpleAvg = round1(margins.reduce((a, b) => a + b, 0) / margins.length);
-  const distractors = [simpleAvg, round1(weighted + 2), round1(Math.max(weighted - 2, 1)), Math.max(...margins)];
-
-  const q = buildQuestion(
-    "Data table: weighted average",
-    prompt,
-    weighted,
-    distractors,
-    (v) => `${v.toFixed(1)}%`,
-    `Weighted margin = ${segments.map((s, i) => `${shares[i]}%×${margins[i]}%`).join(" + ")} = ${weighted.toFixed(1)}%.`
-  );
-
-  return withChart(q, (container) =>
-    renderMultiPanel(container, [
-      (c) =>
-        renderDataTable(c, {
-          title: "Revenue share and profit margin by segment",
-          columns: ["Segment", "Revenue share", "Profit margin"],
-          rows: segments.map((s, i) => [s, `${shares[i]}%`, `${margins[i]}%`]),
-        }),
-      panelHeadcountTable(segments, "Segment"),
-    ])
-  );
-}
-
-function genBarRanking() {
-  const regions = ["North", "South", "East", "West", "Central"];
-  let growth;
-  do {
-    growth = regions.map(() => randInt(-14, 38));
-  } while (new Set(growth).size !== growth.length); // no ties
-
-  const sortedIdx = growth.map((_, i) => i).sort((a, b) => growth[b] - growth[a]);
-  const highestIdx = sortedIdx[0];
-  const secondIdx = sortedIdx[1];
-  const gap = growth[highestIdx] - growth[secondIdx];
-
-  const prompt =
-    `The chart shows year-on-year revenue growth (%) by region. The table shows regional headcount. What is ` +
-    `the gap between the highest and second-highest growth rates?`;
-
-  const distractors = [growth[highestIdx], growth[secondIdx], gap + 4, Math.max(gap - 4, 1)];
-
-  const q = buildQuestion(
-    "Reading carefully: ranking",
-    prompt,
-    gap,
-    distractors,
-    (v) => `${Math.round(v)} pts`,
-    `Ranked highest to lowest: ${sortedIdx.map((i) => `${regions[i]} (${growth[i] > 0 ? "+" : ""}${growth[i]}%)`).join(", ")}. ` +
-      `Highest = ${regions[highestIdx]} (${growth[highestIdx]}%), second = ${regions[secondIdx]} ` +
-      `(${growth[secondIdx]}%). Gap = ${gap} points. The headcount table isn't needed to answer this.`
-  );
-
-  return withChart(q, (container) =>
-    renderMultiPanel(container, [
-      (c) =>
-        renderBarChart(c, {
-          title: "Year-on-year revenue growth (%) by region",
-          categories: regions,
-          values: growth,
-          valueFormat: (v) => `${v > 0 ? "+" : ""}${Math.round(v)}%`,
-        }),
-      panelHeadcountTable(regions, "Region"),
-    ])
+      pickCompanionPanel(products, "Product")
+    )
   );
 }
 
@@ -1239,7 +1182,8 @@ function genLineForecast() {
   );
 
   return withChart(q, (container) =>
-    renderMultiPanel(container, [
+    renderTwoPanelsRandomOrder(
+      container,
       (c) =>
         renderLineChart(c, {
           title: `Annual revenue ($m), ${years[0]}–${years[years.length - 1]}`,
@@ -1247,15 +1191,15 @@ function genLineForecast() {
           series: [{ label: "Revenue", values, colorVar: "var(--series-1)" }],
           valueFormat: (v) => `$${Math.round(v)}m`,
         }),
-      panelWebsiteVisitsBar(years),
-    ])
+      pickCompanionPanel(years, "Year")
+    )
   );
 }
 
 /* ---------- question generators (close reading) ---------- */
 /* These require catching a detail in the chart or table — a one-off item to
-   adjust for, a time period to sum correctly, or a negation — not just
-   reading off the obvious number. */
+   adjust for, a time period to sum correctly, a plausible-but-unneeded
+   companion, or a negation — not just reading off the obvious number. */
 
 function genChartExcludingOneOff() {
   const quarters = ["Q1", "Q2", "Q3", "Q4"];
@@ -1284,7 +1228,8 @@ function genChartExcludingOneOff() {
   );
 
   return withChart(q, (container) =>
-    renderMultiPanel(container, [
+    renderTwoPanelsRandomOrder(
+      container,
       (c) =>
         renderBarChart(c, {
           title: "Quarterly net profit ($000s)",
@@ -1292,8 +1237,8 @@ function genChartExcludingOneOff() {
           values,
           valueFormat: (v) => `$${Math.round(v)}k`,
         }),
-      panelHeadcountTable(quarters, "Quarter"),
-    ])
+      pickCompanionPanel(quarters, "Quarter")
+    )
   );
 }
 
@@ -1327,19 +1272,68 @@ function genChartUnitTrap() {
   );
 
   return withChart(q, (container) =>
-    renderMultiPanel(container, [
+    renderTwoPanelsRandomOrder(
+      container,
       (c) =>
         renderDataTable(c, {
           title: "Monthly revenue ($000s)",
           columns: ["Month", "Revenue"],
           rows: months.map((m, i) => [m, `$${values[i]}k`]),
         }),
-      panelWebsiteVisitsBar(months),
-    ])
+      pickCompanionPanel(months, "Month")
+    )
   );
 }
 
-function genPieNotAboveThreshold() {
+function genRankingIgnoreOtherPanel() {
+  const regions = ["North", "South", "East", "West", "Central"];
+  let revenue;
+  do {
+    revenue = regions.map(() => randInt(180, 920));
+  } while (new Set(revenue).size !== revenue.length);
+  const cost = regions.map(() => randInt(80, 700));
+
+  const sortedIdx = revenue.map((_, i) => i).sort((a, b) => revenue[b] - revenue[a]);
+  const secondIdx = sortedIdx[1];
+
+  const prompt =
+    `One chart shows annual revenue ($000s) by region; the other shows operating cost ($000s) by region. ` +
+    `Which region had the second-highest revenue?`;
+
+  const distractors = regions.filter((_, i) => i !== secondIdx);
+
+  const q = buildQuestion(
+    "Reading carefully: ranking",
+    prompt,
+    regions[secondIdx],
+    distractors,
+    (v) => v,
+    `Ranked by revenue, highest to lowest: ${sortedIdx.map((i) => `${regions[i]} ($${revenue[i]}k)`).join(", ")}. ` +
+      `The second-highest is ${regions[secondIdx]}. The cost figures aren't needed to answer this.`
+  );
+
+  return withChart(q, (container) =>
+    renderTwoPanelsRandomOrder(
+      container,
+      (c) =>
+        renderBarChart(c, {
+          title: "Annual revenue ($000s) by region",
+          categories: regions,
+          values: revenue,
+          valueFormat: (v) => `$${Math.round(v)}k`,
+        }),
+      (c) =>
+        renderBarChart(c, {
+          title: "Operating cost ($000s) by region",
+          categories: regions,
+          values: cost,
+          valueFormat: (v) => `$${Math.round(v)}k`,
+        })
+    )
+  );
+}
+
+function genWhichBelowThresholdFromShareAndMarketSize() {
   const companies = ["Alpha Co", "Beta Inc", "Gamma Ltd", "Delta Group", "Epsilon Corp"];
   let shares;
   do {
@@ -1349,12 +1343,21 @@ function genPieNotAboveThreshold() {
     shares[0] += 100 - shares.reduce((a, b) => a + b, 0);
   } while (shares.some((s) => s <= 0));
 
-  const threshold = choice([12, 18, 22, 27]);
-  const belowIdx = shares.map((s, i) => i).filter((i) => shares[i] < threshold);
-  if (belowIdx.length !== 1) return genPieNotAboveThreshold();
+  const years = ["2022", "2023", "2024"];
+  const marketSize = [randInt(380, 920)];
+  for (let i = 1; i < years.length; i++) marketSize.push(Math.round(marketSize[i - 1] * (1 + randInt(-5, 20) / 100)));
+  const yIdx = randInt(0, years.length - 1);
+
+  const revenues = shares.map((s) => Math.round((s / 100) * marketSize[yIdx]));
+  const threshold = Math.round(marketSize[yIdx] * (choice([10, 14, 18, 22]) / 100));
+  const belowIdx = revenues.map((_, i) => i).filter((i) => revenues[i] < threshold);
+  if (belowIdx.length !== 1) return genWhichBelowThresholdFromShareAndMarketSize();
   const answerIdx = belowIdx[0];
 
-  const prompt = `The chart shows market share by company. Which company's market share is NOT at least ${threshold}%?`;
+  const prompt =
+    `The pie chart shows each company's market share (%). The table shows total industry revenue ($m) by ` +
+    `year. Based on ${years[yIdx]} industry revenue, which company's approximate revenue is NOT at least ` +
+    `$${threshold}m?`;
 
   const distractors = companies.filter((_, i) => i !== answerIdx);
 
@@ -1364,51 +1367,59 @@ function genPieNotAboveThreshold() {
     companies[answerIdx],
     distractors,
     (v) => v,
-    `Shares: ${companies.map((c, i) => `${c} ${shares[i]}%`).join(", ")}. Only ${companies[answerIdx]} falls ` +
-      `below ${threshold}%.`
+    `${years[yIdx]} industry revenue = $${marketSize[yIdx]}m. Company revenue = share × $${marketSize[yIdx]}m: ` +
+      `${companies.map((c, i) => `${c} ${shares[i]}% ≈ $${revenues[i]}m`).join(", ")}. Only ` +
+      `${companies[answerIdx]} falls below $${threshold}m.`
   );
 
   return withChart(q, (container) =>
-    renderMultiPanel(container, [
+    renderTwoPanelsRandomOrder(
+      container,
       (c) =>
         renderPieChart(c, {
           title: "Market share by company",
           segments: companies.map((label, i) => ({ label, value: shares[i] })),
-          sliceLabelFormat: (value) => `${Math.round(value)}%`,
+          sliceLabelFormat: (v) => `${Math.round(v)}%`,
         }),
-      panelFoundingYearTable(companies, "Company"),
-    ])
+      (c) =>
+        renderDataTable(c, {
+          title: "Total industry revenue ($m) by year",
+          columns: ["Year", "Revenue"],
+          rows: years.map((y, i) => [y, `$${marketSize[i]}m`]),
+        })
+    )
   );
 }
 
 const STANDARD_GENERATORS = [
-  genBarReadValue,
-  genBarDifference,
+  genRevenueFromUnitsPrice,
+  genMarginFromRevenueCost,
+  genPricePerUnitFromRevenueUnits,
+  genBlendedMarginFromShareAndMargin,
+  genCompanyRevenueFromShareAndMarketSize,
+  genAbsoluteGrowthFromRateAndBase,
+  genPeakProfitFromRevenueAndCosts,
   genBarPercentChange,
-  genLineTrendRead,
   genLineCAGR,
-  genLineTwoSeries,
-  genPieShare,
-  genPieToValue,
   genStackedBar,
   genTableAverage,
   genTableGrowthRate,
-  genTableRatio,
-  genTableWeightedAvg,
   genLineForecast,
 ];
 
 const CLOSE_READING_GENERATORS = [
-  genBarRanking,
   genChartExcludingOneOff,
   genChartUnitTrap,
-  genPieNotAboveThreshold,
+  genRankingIgnoreOtherPanel,
+  genWhichBelowThresholdFromShareAndMarketSize,
 ];
 
 function buildQuestionSet() {
   // A handful of close-reading questions every attempt (a one-off item to
-  // adjust for, the right months to sum, a negation), plus a random spread
-  // of standard chart/table questions to fill out the rest.
+  // adjust for, the right months to sum, a negation, or a plausible but
+  // unneeded companion panel), plus a random spread of standard chart/table
+  // questions — some of which need only one data source, some both — to
+  // fill out the rest.
   const closeReadingPicks = sampleGenerators(CLOSE_READING_GENERATORS, Math.min(CLOSE_READING_COUNT, CLOSE_READING_GENERATORS.length));
   const standardCount = TOTAL_QUESTIONS - closeReadingPicks.length;
   const standardPicks = sampleGenerators(STANDARD_GENERATORS, Math.min(standardCount, STANDARD_GENERATORS.length));
