@@ -498,6 +498,98 @@ function renderDataTable(container, { title, columns, rows }) {
   container.appendChild(wrap);
 }
 
+/** Renders two or more panels (chart or table) stacked in one container, each
+ * visually separated, so a question can present a second, clearly labelled
+ * data source alongside the one actually needed to answer it. */
+function renderMultiPanel(container, panelRenderers) {
+  container.innerHTML = "";
+  panelRenderers.forEach((renderFn) => {
+    const panel = document.createElement("div");
+    panel.className = "chart-panel";
+    container.appendChild(panel);
+    renderFn(panel);
+  });
+}
+
+/* ---------- reference-only data panels ---------- */
+/* These build a second, clearly labelled chart or table from the same
+   scenario (same categories/periods) that is related to the question but
+   never actually needed to answer it — part of the challenge is noticing
+   that. Each is deterministic in shape, randomised in value. */
+
+function panelHeadcountTable(categories, categoryNoun) {
+  const rows = categories.map((c) => [c, String(randInt(40, 420))]);
+  return (container) =>
+    renderDataTable(container, {
+      title: `Headcount by ${categoryNoun} (for reference)`,
+      columns: [categoryNoun, "Employees"],
+      rows,
+    });
+}
+
+function panelFoundingYearTable(entities, entityNoun) {
+  const rows = entities.map((e) => [e, String(randInt(1975, 2021))]);
+  return (container) =>
+    renderDataTable(container, {
+      title: `${entityNoun} founding year (for reference)`,
+      columns: [entityNoun, "Founded"],
+      rows,
+    });
+}
+
+function panelSatisfactionLine(periods) {
+  const values = periods.map(() => randInt(58, 96));
+  return (container) =>
+    renderLineChart(container, {
+      title: "Customer satisfaction score, out of 100 (for reference)",
+      periods,
+      series: [{ label: "Satisfaction", values, colorVar: "var(--series-3)" }],
+      valueFormat: (v) => `${Math.round(v)}`,
+    });
+}
+
+function panelBudgetBar(categories, categoryNoun) {
+  const values = categories.map(() => randInt(40, 320));
+  return (container) =>
+    renderBarChart(container, {
+      title: `Marketing budget ($000s) by ${categoryNoun} (for reference)`,
+      categories,
+      values,
+      valueFormat: (v) => `$${Math.round(v)}k`,
+    });
+}
+
+function panelPriceTable(entities, entityNoun) {
+  const rows = entities.map((e) => [e, `$${randInt(8, 240)}`]);
+  return (container) =>
+    renderDataTable(container, {
+      title: `${entityNoun} list price (for reference)`,
+      columns: [entityNoun, "List price"],
+      rows,
+    });
+}
+
+function panelWebsiteVisitsBar(periods) {
+  const values = periods.map(() => randInt(12, 95) * 10);
+  return (container) =>
+    renderBarChart(container, {
+      title: "Website visits (000s, for reference)",
+      categories: periods,
+      values,
+      valueFormat: (v) => `${Math.round(v)}k`,
+    });
+}
+
+function panelSquareFootageTable(entities, entityNoun) {
+  const rows = entities.map((e) => [e, `${randInt(4, 38) * 500} sq ft`]);
+  return (container) =>
+    renderDataTable(container, {
+      title: `${entityNoun} floor area (for reference)`,
+      columns: [entityNoun, "Floor area"],
+      rows,
+    });
+}
+
 /* ---------- question generators ---------- */
 /* Every generator builds a fresh chart or table with randomised numbers and
    a question about it, covering the kinds of data-analysis questions used in
@@ -527,12 +619,16 @@ function genBarReadValue() {
   );
 
   return withChart(q, (container) =>
-    renderBarChart(container, {
-      title: "Quarterly revenue ($m)",
-      categories,
-      values,
-      valueFormat: (v) => `$${Math.round(v)}m`,
-    })
+    renderMultiPanel(container, [
+      (c) =>
+        renderBarChart(c, {
+          title: "Quarterly revenue ($m)",
+          categories,
+          values,
+          valueFormat: (v) => `$${Math.round(v)}m`,
+        }),
+      panelHeadcountTable(categories, "Quarter"),
+    ])
   );
 }
 
@@ -564,12 +660,16 @@ function genBarDifference() {
   );
 
   return withChart(q, (container) =>
-    renderBarChart(container, {
-      title: "Annual sales ($000s) by region",
-      categories: regions,
-      values,
-      valueFormat: (v) => `$${Math.round(v)}k`,
-    })
+    renderMultiPanel(container, [
+      (c) =>
+        renderBarChart(c, {
+          title: "Annual sales ($000s) by region",
+          categories: regions,
+          values,
+          valueFormat: (v) => `$${Math.round(v)}k`,
+        }),
+      panelHeadcountTable(regions, "Region"),
+    ])
   );
 }
 
@@ -604,12 +704,16 @@ function genBarPercentChange() {
   );
 
   return withChart(q, (container) =>
-    renderBarChart(container, {
-      title: `Annual revenue ($m), ${years[0]}–${years[years.length - 1]}`,
-      categories: years,
-      values,
-      valueFormat: (v) => `$${Math.round(v)}m`,
-    })
+    renderMultiPanel(container, [
+      (c) =>
+        renderBarChart(c, {
+          title: `Annual revenue ($m), ${years[0]}–${years[years.length - 1]}`,
+          categories: years,
+          values,
+          valueFormat: (v) => `$${Math.round(v)}m`,
+        }),
+      panelSatisfactionLine(years),
+    ])
   );
 }
 
@@ -640,12 +744,16 @@ function genLineTrendRead() {
   );
 
   return withChart(q, (container) =>
-    renderLineChart(container, {
-      title: "Monthly active users (000s)",
-      periods: months,
-      series: [{ label: "Active users", values, colorVar: "var(--series-1)" }],
-      valueFormat: (v) => `${Math.round(v)}k`,
-    })
+    renderMultiPanel(container, [
+      (c) =>
+        renderLineChart(c, {
+          title: "Monthly active users (000s)",
+          periods: months,
+          series: [{ label: "Active users", values, colorVar: "var(--series-1)" }],
+          valueFormat: (v) => `${Math.round(v)}k`,
+        }),
+      panelBudgetBar(months, "month"),
+    ])
   );
 }
 
@@ -675,12 +783,16 @@ function genLineCAGR() {
   );
 
   return withChart(q, (container) =>
-    renderLineChart(container, {
-      title: `Company valuation ($m), ${years[0]}–${years[years.length - 1]}`,
-      periods: years,
-      series: [{ label: "Valuation", values, colorVar: "var(--series-1)" }],
-      valueFormat: (v) => `$${Math.round(v)}m`,
-    })
+    renderMultiPanel(container, [
+      (c) =>
+        renderLineChart(c, {
+          title: `Company valuation ($m), ${years[0]}–${years[years.length - 1]}`,
+          periods: years,
+          series: [{ label: "Valuation", values, colorVar: "var(--series-1)" }],
+          valueFormat: (v) => `$${Math.round(v)}m`,
+        }),
+      panelHeadcountTable(years, "Year"),
+    ])
   );
 }
 
@@ -720,15 +832,19 @@ function genLineTwoSeries() {
   );
 
   return withChart(q, (container) =>
-    renderLineChart(container, {
-      title: "Revenue vs. costs ($m)",
-      periods: years,
-      series: [
-        { label: "Revenue", values: revenue, colorVar: "var(--series-1)" },
-        { label: "Costs", values: costs, colorVar: "var(--series-2)" },
-      ],
-      valueFormat: (v) => `$${Math.round(v)}m`,
-    })
+    renderMultiPanel(container, [
+      (c) =>
+        renderLineChart(c, {
+          title: "Revenue vs. costs ($m)",
+          periods: years,
+          series: [
+            { label: "Revenue", values: revenue, colorVar: "var(--series-1)" },
+            { label: "Costs", values: costs, colorVar: "var(--series-2)" },
+          ],
+          valueFormat: (v) => `$${Math.round(v)}m`,
+        }),
+      panelSatisfactionLine(years),
+    ])
   );
 }
 
@@ -764,11 +880,15 @@ function genPieShare() {
   );
 
   return withChart(q, (container) =>
-    renderPieChart(container, {
-      title: "Market share by company",
-      segments: companies.map((label, i) => ({ label, value: shares[i] })),
-      sliceLabelFormat: (value) => `${Math.round(value)}%`,
-    })
+    renderMultiPanel(container, [
+      (c) =>
+        renderPieChart(c, {
+          title: "Market share by company",
+          segments: companies.map((label, i) => ({ label, value: shares[i] })),
+          sliceLabelFormat: (value) => `${Math.round(value)}%`,
+        }),
+      panelFoundingYearTable(companies, "Company"),
+    ])
   );
 }
 
@@ -808,11 +928,15 @@ function genPieToValue() {
   );
 
   return withChart(q, (container) =>
-    renderPieChart(container, {
-      title: `Revenue breakdown by segment (total $${totalMarket}m)`,
-      segments: segments.map((label, i) => ({ label, value: shares[i] })),
-      sliceLabelFormat: (value) => `${Math.round(value)}%`,
-    })
+    renderMultiPanel(container, [
+      (c) =>
+        renderPieChart(c, {
+          title: `Revenue breakdown by segment (total $${totalMarket}m)`,
+          segments: segments.map((label, i) => ({ label, value: shares[i] })),
+          sliceLabelFormat: (value) => `${Math.round(value)}%`,
+        }),
+      panelHeadcountTable(segments, "Segment"),
+    ])
   );
 }
 
@@ -855,12 +979,16 @@ function genStackedBar() {
   );
 
   return withChart(q, (container) =>
-    renderStackedBarChart(container, {
-      title: "Revenue ($m) by product line",
-      categories: years,
-      series,
-      valueFormat: (v) => `$${Math.round(v)}m`,
-    })
+    renderMultiPanel(container, [
+      (c) =>
+        renderStackedBarChart(c, {
+          title: "Revenue ($m) by product line",
+          categories: years,
+          series,
+          valueFormat: (v) => `$${Math.round(v)}m`,
+        }),
+      panelPriceTable(products, "Product"),
+    ])
   );
 }
 
@@ -893,11 +1021,15 @@ function genTableAverage() {
   );
 
   return withChart(q, (container) =>
-    renderDataTable(container, {
-      title: "Quarterly sales ($000s) by store",
-      columns: ["Store", ...quarters],
-      rows: stores.map((s, i) => [s, ...data[i].map((v) => `$${v}k`)]),
-    })
+    renderMultiPanel(container, [
+      (c) =>
+        renderDataTable(c, {
+          title: "Quarterly sales ($000s) by store",
+          columns: ["Store", ...quarters],
+          rows: stores.map((s, i) => [s, ...data[i].map((v) => `$${v}k`)]),
+        }),
+      panelSquareFootageTable(stores, "Store"),
+    ])
   );
 }
 
@@ -930,11 +1062,15 @@ function genTableGrowthRate() {
   );
 
   return withChart(q, (container) =>
-    renderDataTable(container, {
-      title: "Units sold by product",
-      columns: ["Product", "Year 1", "Year 2", "Year 3"],
-      rows: products.map((p, i) => [p, String(year1[i]), String(year2[i]), String(year3[i])]),
-    })
+    renderMultiPanel(container, [
+      (c) =>
+        renderDataTable(c, {
+          title: "Units sold by product",
+          columns: ["Product", "Year 1", "Year 2", "Year 3"],
+          rows: products.map((p, i) => [p, String(year1[i]), String(year2[i]), String(year3[i])]),
+        }),
+      panelPriceTable(products, "Product"),
+    ])
   );
 }
 
@@ -970,11 +1106,15 @@ function genTableRatio() {
   );
 
   return withChart(q, (container) =>
-    renderDataTable(container, {
-      title: "Revenue and profit ($m) by division",
-      columns: ["Division", "Revenue", "Profit"],
-      rows: divisions.map((d, i) => [d, `$${revenue[i]}m`, `$${profit[i]}m`]),
-    })
+    renderMultiPanel(container, [
+      (c) =>
+        renderDataTable(c, {
+          title: "Revenue and profit ($m) by division",
+          columns: ["Division", "Revenue", "Profit"],
+          rows: divisions.map((d, i) => [d, `$${revenue[i]}m`, `$${profit[i]}m`]),
+        }),
+      panelHeadcountTable(divisions, "Division"),
+    ])
   );
 }
 
@@ -1008,11 +1148,15 @@ function genTableWeightedAvg() {
   );
 
   return withChart(q, (container) =>
-    renderDataTable(container, {
-      title: "Revenue share and profit margin by segment",
-      columns: ["Segment", "Revenue share", "Profit margin"],
-      rows: segments.map((s, i) => [s, `${shares[i]}%`, `${margins[i]}%`]),
-    })
+    renderMultiPanel(container, [
+      (c) =>
+        renderDataTable(c, {
+          title: "Revenue share and profit margin by segment",
+          columns: ["Segment", "Revenue share", "Profit margin"],
+          rows: segments.map((s, i) => [s, `${shares[i]}%`, `${margins[i]}%`]),
+        }),
+      panelHeadcountTable(segments, "Segment"),
+    ])
   );
 }
 
@@ -1027,13 +1171,10 @@ function genBarRanking() {
   const highestIdx = sortedIdx[0];
   const secondIdx = sortedIdx[1];
   const gap = growth[highestIdx] - growth[secondIdx];
-  const headcount = randInt(200, 900);
-  const foundedYear = randInt(1998, 2019);
 
   const prompt =
-    `The chart shows year-on-year revenue growth (%) by region. The company, founded in ${foundedYear}, now ` +
-    `employs around ${headcount} people across all regions. What is the gap between the highest and ` +
-    `second-highest growth rates?`;
+    `The chart shows year-on-year revenue growth (%) by region. The table shows regional headcount, for ` +
+    `reference. What is the gap between the highest and second-highest growth rates?`;
 
   const distractors = [growth[highestIdx], growth[secondIdx], gap + 4, Math.max(gap - 4, 1)];
 
@@ -1045,16 +1186,20 @@ function genBarRanking() {
     (v) => `${Math.round(v)} pts`,
     `Ranked highest to lowest: ${sortedIdx.map((i) => `${regions[i]} (${growth[i] > 0 ? "+" : ""}${growth[i]}%)`).join(", ")}. ` +
       `Highest = ${regions[highestIdx]} (${growth[highestIdx]}%), second = ${regions[secondIdx]} ` +
-      `(${growth[secondIdx]}%). Gap = ${gap} points. The headcount and founding year aren't relevant.`
+      `(${growth[secondIdx]}%). Gap = ${gap} points. The headcount table isn't needed to answer this.`
   );
 
   return withChart(q, (container) =>
-    renderBarChart(container, {
-      title: "Year-on-year revenue growth (%) by region",
-      categories: regions,
-      values: growth,
-      valueFormat: (v) => `${v > 0 ? "+" : ""}${Math.round(v)}%`,
-    })
+    renderMultiPanel(container, [
+      (c) =>
+        renderBarChart(c, {
+          title: "Year-on-year revenue growth (%) by region",
+          categories: regions,
+          values: growth,
+          valueFormat: (v) => `${v > 0 ? "+" : ""}${Math.round(v)}%`,
+        }),
+      panelHeadcountTable(regions, "Region"),
+    ])
   );
 }
 
@@ -1093,12 +1238,16 @@ function genLineForecast() {
   );
 
   return withChart(q, (container) =>
-    renderLineChart(container, {
-      title: `Annual revenue ($m), ${years[0]}–${years[years.length - 1]}`,
-      periods: years,
-      series: [{ label: "Revenue", values, colorVar: "var(--series-1)" }],
-      valueFormat: (v) => `$${Math.round(v)}m`,
-    })
+    renderMultiPanel(container, [
+      (c) =>
+        renderLineChart(c, {
+          title: `Annual revenue ($m), ${years[0]}–${years[years.length - 1]}`,
+          periods: years,
+          series: [{ label: "Revenue", values, colorVar: "var(--series-1)" }],
+          valueFormat: (v) => `$${Math.round(v)}m`,
+        }),
+      panelWebsiteVisitsBar(years),
+    ])
   );
 }
 
@@ -1134,12 +1283,16 @@ function genChartExcludingOneOff() {
   );
 
   return withChart(q, (container) =>
-    renderBarChart(container, {
-      title: "Quarterly net profit ($000s)",
-      categories: quarters,
-      values,
-      valueFormat: (v) => `$${Math.round(v)}k`,
-    })
+    renderMultiPanel(container, [
+      (c) =>
+        renderBarChart(c, {
+          title: "Quarterly net profit ($000s)",
+          categories: quarters,
+          values,
+          valueFormat: (v) => `$${Math.round(v)}k`,
+        }),
+      panelHeadcountTable(quarters, "Quarter"),
+    ])
   );
 }
 
@@ -1173,11 +1326,15 @@ function genChartUnitTrap() {
   );
 
   return withChart(q, (container) =>
-    renderDataTable(container, {
-      title: "Monthly revenue ($000s)",
-      columns: ["Month", "Revenue"],
-      rows: months.map((m, i) => [m, `$${values[i]}k`]),
-    })
+    renderMultiPanel(container, [
+      (c) =>
+        renderDataTable(c, {
+          title: "Monthly revenue ($000s)",
+          columns: ["Month", "Revenue"],
+          rows: months.map((m, i) => [m, `$${values[i]}k`]),
+        }),
+      panelWebsiteVisitsBar(months),
+    ])
   );
 }
 
@@ -1211,11 +1368,15 @@ function genPieNotAboveThreshold() {
   );
 
   return withChart(q, (container) =>
-    renderPieChart(container, {
-      title: "Market share by company",
-      segments: companies.map((label, i) => ({ label, value: shares[i] })),
-      sliceLabelFormat: (value) => `${Math.round(value)}%`,
-    })
+    renderMultiPanel(container, [
+      (c) =>
+        renderPieChart(c, {
+          title: "Market share by company",
+          segments: companies.map((label, i) => ({ label, value: shares[i] })),
+          sliceLabelFormat: (value) => `${Math.round(value)}%`,
+        }),
+      panelFoundingYearTable(companies, "Company"),
+    ])
   );
 }
 

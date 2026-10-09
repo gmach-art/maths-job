@@ -46,16 +46,19 @@ python3 -m http.server 8000
 
 ## What the Prep quiz does
 
-- Generates **10 multiple-choice word problems** per attempt, with randomised
-  numbers so every playthrough is different: **4 close-reading questions**
-  every time (a negation, a direction-of-adjustment trap, an irrelevant
-  distraction, or a unit mismatch — details that are easy to miss), plus 6
+- Generates **10 multiple-choice questions** per attempt, with randomised
+  numbers so every playthrough is different: **one LSAT-style logic game**
+  every time (a scheduling or grouping constraint-satisfaction puzzle — six
+  people assigned to three groups under a handful of stated rules; pick the
+  one candidate assignment consistent with all of them), **4 close-reading
+  questions** (a negation, a direction-of-adjustment trap, an irrelevant
+  distraction, or a unit mismatch — details that are easy to miss), plus 5
   more sampled from a pool of word-problem and case/accounting topics
   (algebra, weighted averages, speed/distance, simultaneous equations,
   percentages, ratios, work rate, compound growth, mixtures, gross margin,
   break-even analysis, contribution margin, and payback period).
-- No charts, graphs, or diagrams — every question is a pure word problem, as
-  requested.
+- No charts, graphs, or diagrams — every question is text only, as requested;
+  the logic game states its rules as a plain numbered list.
 - Shows a **countdown timer** against a **recommended completion time of
   11:00** (about 66 seconds per question — a tighter pace than a typical
   assessment centre). The test auto-submits if time runs out.
@@ -72,6 +75,10 @@ python3 -m http.server 8000
   freshly randomised bar chart, line chart, pie chart, stacked bar chart, or
   data table — the kind of chart-reading and data-interpretation questions
   used in consulting numerical reasoning tests (Bain SOVA, BCG online test).
+- Every question pairs **two labelled data sources** — two graphs, or a
+  graph and a small table — from the same scenario. Only one is needed to
+  answer; the other is related (same categories or time periods) but a red
+  herring, so part of the test is sifting out what's actually relevant.
 - Covers fifteen question types per attempt: **4 close-reading questions**
   every time (a one-off item to adjust for, the right months to sum, a
   ranking question buried in a distracting sentence, or a "which is NOT"

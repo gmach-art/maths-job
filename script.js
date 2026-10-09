@@ -3,6 +3,7 @@
 const TARGET_SECONDS = 11 * 60; // recommended completion time
 const TOTAL_QUESTIONS = 10;
 const CLOSE_READING_COUNT = 4;
+const LOGIC_GAME_COUNT = 1;
 const HISTORY_KEY = "numericalReasoningTrainerHistory";
 const HISTORY_LIMIT = 30;
 
@@ -777,14 +778,185 @@ const CLOSE_READING_GENERATORS = [
   genUnitConversionTrap,
 ];
 
+/* ---------- question generators (logic games) ---------- */
+/* A classic LSAT-style Logic Game: a scheduling or grouping constraint-
+   satisfaction puzzle. Six people are assigned to three groups (two per
+   group) under a handful of stated rules; the question asks which one of
+   four candidate assignments is consistent with every rule. This is the
+   same structure computer science calls a constraint satisfaction problem
+   (CSP) and operations research calls a staff-scheduling problem — here
+   solved by brute-force verification against each rule rather than a
+   general-purpose solver, since there are only 90 possible groupings. */
+
+const LOGIC_GAME_PEOPLE_POOL = ["Amir", "Bella", "Carlos", "Dana", "Elin", "Farah", "Gus", "Hana"];
+
+function logicGameIndexOf(groups) {
+  return (person) => groups.findIndex((g) => g.includes(person));
+}
+
+function logicGameFormat(groupShortLabels, groups) {
+  return groupShortLabels.map((label, i) => `${label}: ${[...groups[i]].sort().join(", ")}`).join(" | ");
+}
+
+function logicGameKey(groups) {
+  return groups.map((g) => [...g].sort().join(",")).join("|");
+}
+
+function buildLogicGameConstraints(people, groups, ordered) {
+  const idxOf = logicGameIndexOf(groups);
+  const pairs = [];
+  for (let i = 0; i < people.length; i++) {
+    for (let j = i + 1; j < people.length; j++) pairs.push([people[i], people[j]]);
+  }
+  shuffleInPlace(pairs);
+
+  const used = new Set();
+  const pickPair = () => {
+    for (const [x, y] of pairs) {
+      const key = `${x}|${y}`;
+      if (!used.has(key)) {
+        used.add(key);
+        return [x, y];
+      }
+    }
+    return pairs[randInt(0, pairs.length - 1)];
+  };
+
+  const sameOrDiffConstraint = (x, y) => {
+    const same = idxOf(x) === idxOf(y);
+    return {
+      check: (gi) => (same ? gi(x) === gi(y) : gi(x) !== gi(y)),
+      describe: (labels) =>
+        same ? `${x} and ${y} are in the same ${labels.noun}.` : `${x} and ${y} are not in the same ${labels.noun}.`,
+    };
+  };
+
+  const constraints = [];
+
+  const [p1x, p1y] = pickPair();
+  constraints.push(sameOrDiffConstraint(p1x, p1y));
+
+  const [p2x, p2y] = pickPair();
+  constraints.push(sameOrDiffConstraint(p2x, p2y));
+
+  const [p3x, p3y] = pickPair();
+  if (ordered) {
+    const [early, late] = idxOf(p3x) < idxOf(p3y) ? [p3x, p3y] : [p3y, p3x];
+    constraints.push({
+      check: (gi) => gi(early) < gi(late),
+      describe: (labels) => `${early} is scheduled in an earlier ${labels.noun} than ${late}.`,
+    });
+  } else {
+    constraints.push(sameOrDiffConstraint(p3x, p3y));
+  }
+
+  const [p4x, p4y] = pickPair();
+  const gx = idxOf(p4x);
+  const gy = idxOf(p4y);
+  constraints.push({
+    check: (gi) => (gi(p4x) === gx ? gi(p4y) === gy : true),
+    describe: (labels) => `If ${p4x} is in ${labels.names[gx]}, then ${p4y} is in ${labels.names[gy]}.`,
+  });
+
+  return constraints;
+}
+
+function genLogicGame() {
+  const templates = [
+    {
+      ordered: true,
+      personNoun: "employees",
+      groupNoun: "shift",
+      groupLabels: ["the Morning shift", "the Afternoon shift", "the Evening shift"],
+      groupShortLabels: ["Morning", "Afternoon", "Evening"],
+      intro: (people) =>
+        `Six employees — ${people.join(", ")} — must each be assigned to one of three shifts: Morning, ` +
+        `Afternoon, or Evening. Exactly two employees are assigned to each shift.`,
+    },
+    {
+      ordered: false,
+      personNoun: "consultants",
+      groupNoun: "team",
+      groupLabels: ["Team 1", "Team 2", "Team 3"],
+      groupShortLabels: ["Team 1", "Team 2", "Team 3"],
+      intro: (people) =>
+        `Six consultants — ${people.join(", ")} — must each be assigned to one of three project teams: ` +
+        `Team 1, Team 2, or Team 3. Exactly two consultants are assigned to each team.`,
+    },
+  ];
+  const template = choice(templates);
+
+  const people = shuffleInPlace([...LOGIC_GAME_PEOPLE_POOL]).slice(0, 6);
+  const shuffled = shuffleInPlace([...people]);
+  const groups = [shuffled.slice(0, 2), shuffled.slice(2, 4), shuffled.slice(4, 6)];
+  const idxOf = logicGameIndexOf(groups);
+
+  const constraints = buildLogicGameConstraints(people, groups, template.ordered);
+  const labels = { noun: template.groupNoun, names: template.groupLabels };
+  const satisfiesAll = (gi) => constraints.every((c) => c.check(gi));
+
+  if (!satisfiesAll(idxOf)) return genLogicGame(); // shouldn't happen, but regenerate defensively
+
+  const correctString = logicGameFormat(template.groupShortLabels, groups);
+  const seenKeys = new Set([logicGameKey(groups)]);
+  const distractorStrings = [];
+
+  let attempts = 0;
+  while (distractorStrings.length < 3 && attempts < 400) {
+    attempts++;
+    const candidate = groups.map((g) => [...g]);
+    const swaps = choice([1, 1, 2]);
+    for (let s = 0; s < swaps; s++) {
+      const gA = randInt(0, 2);
+      let gB = randInt(0, 2);
+      while (gB === gA) gB = randInt(0, 2);
+      const pA = randInt(0, candidate[gA].length - 1);
+      const pB = randInt(0, candidate[gB].length - 1);
+      const tmp = candidate[gA][pA];
+      candidate[gA][pA] = candidate[gB][pB];
+      candidate[gB][pB] = tmp;
+    }
+    const key = logicGameKey(candidate);
+    if (seenKeys.has(key)) continue;
+    if (satisfiesAll(logicGameIndexOf(candidate))) continue; // would be a second correct answer
+    seenKeys.add(key);
+    distractorStrings.push(logicGameFormat(template.groupShortLabels, candidate));
+  }
+  if (distractorStrings.length < 3) return genLogicGame(); // couldn't find enough distinct wrong options
+
+  const prompt =
+    `${template.intro(people)}\n\n` +
+    `Rules:\n` +
+    constraints.map((c, i) => `${i + 1}. ${c.describe(labels)}`).join("\n") +
+    `\n\nWhich one of the following could be an accurate assignment of ${template.personNoun} to ` +
+    `${template.groupNoun}s?`;
+
+  const explanation =
+    `${correctString} satisfies every rule above. Check each option against all ${constraints.length} rules ` +
+    `in turn — every incorrect option breaks at least one of them.`;
+
+  return buildQuestion(
+    `Logic game: ${template.ordered ? "scheduling" : "grouping"}`,
+    prompt,
+    correctString,
+    distractorStrings,
+    (v) => v,
+    explanation
+  );
+}
+
+const LOGIC_GAME_GENERATORS = [genLogicGame];
+
 function buildQuestionSet() {
-  // A handful of close-reading questions every attempt (details that are
-  // easy to miss), plus a random spread of standard case-math and word
-  // problems to fill out the rest — so every playthrough is different.
+  // One LSAT-style logic game every attempt, a handful of close-reading
+  // questions (details that are easy to miss), and a random spread of
+  // standard case-math and word problems to fill out the rest — so every
+  // playthrough is different.
+  const logicGamePicks = sampleGenerators(LOGIC_GAME_GENERATORS, Math.min(LOGIC_GAME_COUNT, LOGIC_GAME_GENERATORS.length));
   const closeReadingPicks = sampleGenerators(CLOSE_READING_GENERATORS, Math.min(CLOSE_READING_COUNT, CLOSE_READING_GENERATORS.length));
-  const standardCount = TOTAL_QUESTIONS - closeReadingPicks.length;
+  const standardCount = TOTAL_QUESTIONS - logicGamePicks.length - closeReadingPicks.length;
   const standardPicks = sampleGenerators(STANDARD_GENERATORS, Math.min(standardCount, STANDARD_GENERATORS.length));
-  const questions = [...closeReadingPicks, ...standardPicks].map((gen) => gen());
+  const questions = [...logicGamePicks, ...closeReadingPicks, ...standardPicks].map((gen) => gen());
   return shuffleInPlace(questions);
 }
 
