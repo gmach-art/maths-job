@@ -576,9 +576,7 @@ function genRevenueFromUnitsPrice() {
   const otherIdx = (idx + 1) % products.length;
   const correct = units[idx] * prices[idx];
 
-  const prompt =
-    `The chart shows units sold (000s) by product. The table shows the price per unit ($) by product. What ` +
-    `was total revenue for ${products[idx]}, in $000s?`;
+  const prompt = `What was total revenue for ${products[idx]}, in $000s?`;
 
   const distractors = [
     units[idx] * prices[otherIdx],
@@ -624,9 +622,7 @@ function genMarginFromRevenueCost() {
   const profit = revenue[idx] - cost[idx];
   const margin = round1((profit / revenue[idx]) * 100);
 
-  const prompt =
-    `The chart shows revenue ($m) by division. The table shows cost ($m) by division. What was the profit ` +
-    `margin for ${divisions[idx]} (profit as a percentage of revenue), to 1 decimal place?`;
+  const prompt = `What was the profit margin for ${divisions[idx]} (profit as a percentage of revenue), to 1 decimal place?`;
 
   const distractors = [
     round1((cost[idx] / revenue[idx]) * 100),
@@ -673,9 +669,7 @@ function genPricePerUnitFromRevenueUnits() {
   const otherIdx = (idx + 1) % stores.length;
   const correct = round1((revenue[idx] * 1000) / units[idx]);
 
-  const prompt =
-    `The chart shows revenue ($000s) by store. The table shows units sold by store. What was the average ` +
-    `price per unit at ${stores[idx]}, to the nearest cent?`;
+  const prompt = `What was the average price per unit at ${stores[idx]}, to the nearest cent?`;
 
   const distractors = [
     round1((revenue[otherIdx] * 1000) / units[idx]),
@@ -728,9 +722,7 @@ function genBlendedMarginFromShareAndMargin() {
   const weighted = round1(segments.reduce((sum, _, i) => sum + (shares[i] / 100) * margins[i], 0));
   const simpleAvg = round1(margins.reduce((a, b) => a + b, 0) / margins.length);
 
-  const prompt =
-    `The pie chart shows each segment's share of company revenue. The table shows each segment's profit ` +
-    `margin. What is the company's overall profit margin, weighted by revenue share, to 1 decimal place?`;
+  const prompt = `What is the company's overall profit margin, weighted by revenue share, to 1 decimal place?`;
 
   const distractors = [simpleAvg, round1(weighted + 3), round1(Math.max(weighted - 3, 1)), Math.max(...margins)];
 
@@ -783,9 +775,8 @@ function genCompanyRevenueFromShareAndMarketSize() {
   const correct = Math.round((shares[idx] / 100) * totalRevenue[yIdx]);
 
   const prompt =
-    `The pie chart shows the current breakdown of total revenue by segment. The table shows total company ` +
-    `revenue ($m) by year. Assuming the same breakdown applied in ${years[yIdx]}, what was the approximate ` +
-    `${segments[idx]} segment's revenue that year?`;
+    `Assuming the same breakdown applied in ${years[yIdx]}, what was the approximate ${segments[idx]} ` +
+    `segment's revenue that year?`;
 
   const distractors = [
     Math.round((shares[otherIdx] / 100) * totalRevenue[yIdx]),
@@ -830,9 +821,7 @@ function genAbsoluteGrowthFromRateAndBase() {
   const idx = randInt(0, regions.length - 1);
   const dollarGrowth = Math.round(priorRevenue[idx] * (growthPct[idx] / 100));
 
-  const prompt =
-    `The chart shows year-on-year revenue growth (%) by region. The table shows last year's revenue ($000s) ` +
-    `by region. What was ${regions[idx]}'s absolute change in revenue this year, in $000s?`;
+  const prompt = `What was ${regions[idx]}'s absolute change in revenue this year, in $000s?`;
 
   const distractors = [
     priorRevenue[idx],
@@ -889,9 +878,7 @@ function genPeakProfitFromRevenueAndCosts() {
   });
   const peakProfit = profits[bestIdx];
 
-  const prompt =
-    `The chart shows annual revenue ($m) by year. The table shows annual costs ($m) by year. What was ` +
-    `profit (revenue minus costs) in the year it peaked?`;
+  const prompt = `What was profit (revenue minus costs) in the year it peaked?`;
 
   const distractors = [...profits.filter((_, i) => i !== bestIdx), peakProfit + 5, peakProfit - 5];
 
@@ -940,8 +927,8 @@ function genBarPercentChange() {
   const oneYearPct = round1(((values[idx] - values[idx - 1]) / values[idx - 1]) * 100);
 
   const prompt =
-    `The chart shows annual revenue ($m) from ${years[0]} to ${years[years.length - 1]}. What was the ` +
-    `percentage change in revenue from ${years[idx - 2]} to ${years[idx]} (two years later), to 1 decimal place?`;
+    `What was the percentage change in revenue from ${years[idx - 2]} to ${years[idx]} (two years later), to ` +
+    `1 decimal place?`;
 
   const distractors = [round1(-pctChange), oneYearPct, round1(pctChange + 3), round1(pctChange - 3)];
 
@@ -977,9 +964,7 @@ function genLineCAGR() {
   const cagrPct = choice([4, 6, 8, 9, 11, 13, 16, 19, 22]);
   const values = years.map((_, i) => Math.round(startVal * Math.pow(1 + cagrPct / 100, i)));
 
-  const prompt =
-    `The chart shows company valuation ($m) from ${years[0]} to ${years[years.length - 1]}. What is the ` +
-    `compound annual growth rate (CAGR) over this period, to the nearest whole percent?`;
+  const prompt = `What is the compound annual growth rate (CAGR) over this period, to the nearest whole percent?`;
 
   const totalGrowthPct = round1((values[values.length - 1] / values[0] - 1) * 100);
   const avgAnnualNaive = Math.round(totalGrowthPct / (years.length - 1));
@@ -1026,8 +1011,8 @@ function genStackedBar() {
   const change = round1(shareLater - shareEarlier);
 
   const prompt =
-    `The chart shows revenue ($m) by product line, stacked by year. By how many percentage points did ` +
-    `${products[pIdx]}'s share of total revenue change from ${years[yIdxEarlier]} to ${years[yIdxLater]}?`;
+    `By how many percentage points did ${products[pIdx]}'s share of total revenue change from ` +
+    `${years[yIdxEarlier]} to ${years[yIdxLater]}?`;
 
   const distractors = [
     round1(-change),
@@ -1076,8 +1061,8 @@ function genTableAverage() {
   const diff = round1(storeAvg - overallAvg);
 
   const prompt =
-    `The table shows quarterly sales ($000s) by store. By how much is ${stores[idx]}'s average quarterly ` +
-    `sales above or below the overall average across all ${stores.length} stores, to 1 decimal place?`;
+    `By how much is ${stores[idx]}'s average quarterly sales above or below the overall average across all ` +
+    `${stores.length} stores, to 1 decimal place?`;
 
   const distractors = [round1(storeAvg), round1(-diff), round1(diff + 15), round1(diff - 15)];
 
@@ -1117,8 +1102,8 @@ function genTableGrowthRate() {
   const oneStepOnly = round1(((year2[idx] - year1[idx]) / year1[idx]) * 100);
 
   const prompt =
-    `The table shows units sold across three years, by product. What was the compound annual growth rate ` +
-    `(CAGR) in units sold for ${products[idx]} from Year 1 to Year 3, to 1 decimal place?`;
+    `What was the compound annual growth rate (CAGR) in units sold for ${products[idx]} from Year 1 to Year ` +
+    `3, to 1 decimal place?`;
 
   const distractors = [simpleGrowth, oneStepOnly, round1(cagr + 4), round1(Math.max(cagr - 4, -95))];
 
@@ -1159,9 +1144,8 @@ function genLineForecast() {
   const oneStepOnly = Math.round(lastVal * (1 + growthPct / 100));
 
   const prompt =
-    `The chart shows a company's annual revenue ($m), which has grown at a steady rate each year. If this ` +
-    `growth rate continues, approximately what will revenue be in ${twoAheadYear} (two years after the last ` +
-    `data point)?`;
+    `Assuming revenue has grown at a steady annual rate, approximately what will revenue be in ` +
+    `${twoAheadYear} (two years after the last data point)?`;
 
   const distractors = [
     oneStepOnly,
@@ -1210,10 +1194,9 @@ function genChartExcludingOneOff() {
   const underlying = values[idx] + charge - gain;
 
   const prompt =
-    `The chart shows quarterly net profit ($000s). ${quarters[idx]}'s figure includes both a $${charge}k ` +
-    `one-off restructuring charge (which reduced reported profit) and a $${gain}k one-off gain from a ` +
-    `property sale (which boosted reported profit). What was ${quarters[idx]}'s underlying profit, ` +
-    `excluding both one-off items?`;
+    `${quarters[idx]}'s figure includes both a $${charge}k one-off restructuring charge (which reduced ` +
+    `reported profit) and a $${gain}k one-off gain from a property sale (which boosted reported profit). ` +
+    `What was ${quarters[idx]}'s underlying profit, excluding both one-off items?`;
 
   const distractors = [values[idx], values[idx] + charge + gain, values[idx] - charge + gain, underlying + 25];
 
@@ -1253,7 +1236,7 @@ function genChartUnitTrap() {
   const adjacentMonths = [adjIdx * 3, adjIdx * 3 + 1, adjIdx * 3 + 2];
   const adjacentTotal = adjacentMonths.reduce((sum, i) => sum + values[i], 0);
 
-  const prompt = `The table shows monthly revenue ($000s) for the full year. What was total revenue for ${quarterLabel}?`;
+  const prompt = `What was total revenue for ${quarterLabel}?`;
 
   const distractors = [
     values[quarterMonths[0]],
@@ -1296,9 +1279,7 @@ function genRankingIgnoreOtherPanel() {
   const sortedIdx = revenue.map((_, i) => i).sort((a, b) => revenue[b] - revenue[a]);
   const secondIdx = sortedIdx[1];
 
-  const prompt =
-    `One chart shows annual revenue ($000s) by region; the other shows operating cost ($000s) by region. ` +
-    `Which region had the second-highest revenue?`;
+  const prompt = `Which region had the second-highest revenue?`;
 
   const distractors = regions.filter((_, i) => i !== secondIdx);
 
@@ -1355,8 +1336,7 @@ function genWhichBelowThresholdFromShareAndMarketSize() {
   const answerIdx = belowIdx[0];
 
   const prompt =
-    `The pie chart shows each company's market share (%). The table shows total industry revenue ($m) by ` +
-    `year. Based on ${years[yIdx]} industry revenue, which company's approximate revenue is NOT at least ` +
+    `Based on ${years[yIdx]} industry revenue, which company's approximate revenue is NOT at least ` +
     `$${threshold}m?`;
 
   const distractors = companies.filter((_, i) => i !== answerIdx);
