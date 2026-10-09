@@ -511,17 +511,18 @@ function renderMultiPanel(container, panelRenderers) {
   });
 }
 
-/* ---------- reference-only data panels ---------- */
-/* These build a second, clearly labelled chart or table from the same
-   scenario (same categories/periods) that is related to the question but
-   never actually needed to answer it — part of the challenge is noticing
-   that. Each is deterministic in shape, randomised in value. */
+/* ---------- secondary data panels ---------- */
+/* These build a second chart or table from the same scenario (same
+   categories/periods) that is related to the question but never actually
+   needed to answer it — presented exactly like the primary panel, with no
+   tell, so noticing that is itself part of the challenge. Each is
+   deterministic in shape, randomised in value. */
 
 function panelHeadcountTable(categories, categoryNoun) {
   const rows = categories.map((c) => [c, String(randInt(40, 420))]);
   return (container) =>
     renderDataTable(container, {
-      title: `Headcount by ${categoryNoun} (for reference)`,
+      title: `Headcount by ${categoryNoun}`,
       columns: [categoryNoun, "Employees"],
       rows,
     });
@@ -531,7 +532,7 @@ function panelFoundingYearTable(entities, entityNoun) {
   const rows = entities.map((e) => [e, String(randInt(1975, 2021))]);
   return (container) =>
     renderDataTable(container, {
-      title: `${entityNoun} founding year (for reference)`,
+      title: `${entityNoun} founding year`,
       columns: [entityNoun, "Founded"],
       rows,
     });
@@ -541,7 +542,7 @@ function panelSatisfactionLine(periods) {
   const values = periods.map(() => randInt(58, 96));
   return (container) =>
     renderLineChart(container, {
-      title: "Customer satisfaction score, out of 100 (for reference)",
+      title: "Customer satisfaction score (out of 100)",
       periods,
       series: [{ label: "Satisfaction", values, colorVar: "var(--series-3)" }],
       valueFormat: (v) => `${Math.round(v)}`,
@@ -552,7 +553,7 @@ function panelBudgetBar(categories, categoryNoun) {
   const values = categories.map(() => randInt(40, 320));
   return (container) =>
     renderBarChart(container, {
-      title: `Marketing budget ($000s) by ${categoryNoun} (for reference)`,
+      title: `Marketing budget ($000s) by ${categoryNoun}`,
       categories,
       values,
       valueFormat: (v) => `$${Math.round(v)}k`,
@@ -563,7 +564,7 @@ function panelPriceTable(entities, entityNoun) {
   const rows = entities.map((e) => [e, `$${randInt(8, 240)}`]);
   return (container) =>
     renderDataTable(container, {
-      title: `${entityNoun} list price (for reference)`,
+      title: `${entityNoun} list price`,
       columns: [entityNoun, "List price"],
       rows,
     });
@@ -573,7 +574,7 @@ function panelWebsiteVisitsBar(periods) {
   const values = periods.map(() => randInt(12, 95) * 10);
   return (container) =>
     renderBarChart(container, {
-      title: "Website visits (000s, for reference)",
+      title: "Website visits (000s)",
       categories: periods,
       values,
       valueFormat: (v) => `${Math.round(v)}k`,
@@ -584,7 +585,7 @@ function panelSquareFootageTable(entities, entityNoun) {
   const rows = entities.map((e) => [e, `${randInt(4, 38) * 500} sq ft`]);
   return (container) =>
     renderDataTable(container, {
-      title: `${entityNoun} floor area (for reference)`,
+      title: `${entityNoun} floor area`,
       columns: [entityNoun, "Floor area"],
       rows,
     });
@@ -1173,8 +1174,8 @@ function genBarRanking() {
   const gap = growth[highestIdx] - growth[secondIdx];
 
   const prompt =
-    `The chart shows year-on-year revenue growth (%) by region. The table shows regional headcount, for ` +
-    `reference. What is the gap between the highest and second-highest growth rates?`;
+    `The chart shows year-on-year revenue growth (%) by region. The table shows regional headcount. What is ` +
+    `the gap between the highest and second-highest growth rates?`;
 
   const distractors = [growth[highestIdx], growth[secondIdx], gap + 4, Math.max(gap - 4, 1)];
 
