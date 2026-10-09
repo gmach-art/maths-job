@@ -49,14 +49,17 @@ python3 -m http.server 8000
 - Generates **10 multiple-choice questions** per attempt, with randomised
   numbers so every playthrough is different: **one LSAT-style logic game**
   every time (a scheduling or grouping constraint-satisfaction puzzle — six
-  people assigned to three groups under a handful of stated rules; pick the
-  one candidate assignment consistent with all of them), **4 close-reading
-  questions** (a negation, a direction-of-adjustment trap, an irrelevant
-  distraction, or a unit mismatch — details that are easy to miss), plus 5
-  more sampled from a pool of word-problem and case/accounting topics
-  (algebra, weighted averages, speed/distance, simultaneous equations,
-  percentages, ratios, work rate, compound growth, mixtures, gross margin,
-  break-even analysis, contribution margin, and payback period).
+  people assigned to three groups under a handful of stated rules, including
+  one quantitative rule comparing a numeric total between two groups; pick
+  the one candidate assignment consistent with all of them, which can't be
+  done by checking just a single rule), **4 close-reading questions** (a
+  negation, a direction-of-adjustment trap, an irrelevant distraction, or a
+  unit mismatch — details that are easy to miss), plus 5 more sampled from a
+  pool of word-problem and case/accounting topics (weighted averages,
+  speed/distance, simultaneous equations, percentages, ratios (now framed as
+  department headcounts combined with a growth rate), work rate, compound
+  growth, mixtures, gross margin, break-even analysis, contribution margin,
+  and payback period).
 - No charts, graphs, or diagrams — every question is text only, as requested;
   the logic game states its rules as a plain numbered list.
 - Shows a **countdown timer** against a **recommended completion time of

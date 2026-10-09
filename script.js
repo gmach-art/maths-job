@@ -128,29 +128,6 @@ function buildQuestion(category, prompt, correctValue, rawDistractors, formatFn,
    so replaying the test gives a fresh set of questions. Most require at
    least two reasoning steps rather than a single formula application. */
 
-function genAlgebra() {
-  const a = randInt(3, 9);
-  const p = randInt(4, 15);
-  const x = randInt(6, 48);
-  const b = randInt(5, 120);
-  const c = a * (x + p) - b;
-
-  const prompt =
-    `A recruiter poses a brain-teaser: "Think of a number, add ${p}, multiply the result by ${a}, ` +
-    `then subtract ${b}. The result is ${c}." What number was the candidate thinking of?`;
-
-  const distractors = [x + p, Math.round((c + b - p) / a), Math.round(c / a), Math.max(x - p, 0)];
-
-  return buildQuestion(
-    "Algebra",
-    prompt,
-    x,
-    distractors,
-    (v) => String(Math.round(v)),
-    `${a} × (x + ${p}) − ${b} = ${c}, so x + ${p} = (${c} + ${b}) ÷ ${a} = ${x + p}, and x = ${x + p} − ${p} = ${x}.`
-  );
-}
-
 function genWeightedAverage() {
   const n1 = randInt(15, 60);
   const n2 = randInt(15, 60);
@@ -286,22 +263,32 @@ function genRatio() {
   const amountA = rA * totalPart;
   const amountB = rB * totalPart;
   const amountC = rC * totalPart;
+  const growthPct = choice([5, 8, 10, 12, 15, 20]);
+  const projectedC = Math.round(amountC * (1 + growthPct / 100));
 
   const prompt =
-    `A bakery's recipe uses flour, sugar, and butter in the ratio ${rA}:${rB}:${rC}. If a batch uses ` +
-    `${amountA} kg of flour, how much butter is needed, in kg?`;
+    `A company's headcount is split across Engineering, Sales, and Operations in the ratio ${rA}:${rB}:${rC}. ` +
+    `It currently has ${amountA} employees in Engineering. Operations is projected to grow by ${growthPct}% ` +
+    `next quarter. How many employees will Operations have after that growth, rounded to the nearest whole ` +
+    `number?`;
 
-  const swapped = Math.round((amountA * rB) / rA);
-  const distractors = [swapped, amountB, amountC + rC, Math.max(amountC - rC, 1)];
+  const swappedBase = Math.round((amountA * rB) / rA);
+  const distractors = [
+    amountC,
+    Math.round(amountB * (1 + growthPct / 100)),
+    Math.round(amountC * (1 + growthPct / 200)),
+    Math.round(swappedBase * (1 + growthPct / 100)),
+  ];
 
   return buildQuestion(
     "Ratios",
     prompt,
-    amountC,
+    projectedC,
     distractors,
-    (v) => `${Math.round(v)} kg`,
-    `Butter = flour × (${rC}/${rA}) = ${amountA} × ${rC} ÷ ${rA} = ${amountC} kg. (Sugar's ratio, ${rB}, ` +
-      `isn't needed here.)`
+    (v) => `${Math.round(v)} employees`,
+    `Operations currently = Engineering × (${rC}/${rA}) = ${amountA} × ${rC} ÷ ${rA} = ${amountC} employees. ` +
+      `(Sales's ratio, ${rB}, isn't needed to find Operations's current headcount.) After ${growthPct}% ` +
+      `growth: ${amountC} × 1.${String(growthPct).padStart(2, "0")} = ${projectedC} employees.`
   );
 }
 
@@ -518,10 +505,12 @@ function genContributionMarginRatio() {
   const blended = round1((mixAPct / 100) * ratioA + (mixBPct / 100) * ratioB);
 
   const prompt =
-    `A company sells two products. Product A sells for $${priceA} with a variable cost of $${varA}, and ` +
-    `makes up ${mixAPct}% of unit sales. Product B sells for $${priceB} with a variable cost of $${varB}, ` +
-    `and makes up the remaining ${mixBPct}% of unit sales. What is the company's blended contribution ` +
-    `margin ratio, weighted by sales mix, to 1 decimal place?`;
+    `A company sells two products. (Contribution margin ratio = the percentage of each sales dollar left ` +
+    `over, after variable costs, to cover fixed costs and profit — i.e. (price − variable cost) ÷ price.) ` +
+    `Product A sells for $${priceA} with a variable cost of $${varA}, and makes up ${mixAPct}% of unit ` +
+    `sales. Product B sells for $${priceB} with a variable cost of $${varB}, and makes up the remaining ` +
+    `${mixBPct}% of unit sales. What is the company's blended contribution margin ratio, weighted by sales ` +
+    `mix, to 1 decimal place?`;
 
   const simpleAvg = round1((ratioA + ratioB) / 2);
   const distractors = [simpleAvg, round1(blended + 4), round1(Math.max(blended - 4, 1)), round1(ratioA)];
@@ -693,36 +682,6 @@ function genSecondHighestWithDistraction() {
   );
 }
 
-function genExcludingOneOff() {
-  const reportedProfit = randInt(50, 300) * 10;
-  const charge = randInt(10, 60) * 10;
-  const gain = randInt(10, 60) * 10;
-  const underlyingProfit = reportedProfit + charge - gain;
-
-  const prompt =
-    `A company reported net profit of $${reportedProfit.toLocaleString()}k this year. This figure ` +
-    `includes both a $${charge.toLocaleString()}k one-off restructuring charge (which reduced reported ` +
-    `profit) and a $${gain.toLocaleString()}k one-off gain from an asset sale (which boosted reported ` +
-    `profit). What was the company's underlying profit, excluding both one-off items?`;
-
-  const distractors = [
-    reportedProfit,
-    reportedProfit + charge + gain,
-    reportedProfit - charge + gain,
-    underlyingProfit + 30,
-  ];
-
-  return buildQuestion(
-    "Reading carefully: one-off items",
-    prompt,
-    underlyingProfit,
-    distractors,
-    (v) => `$${Math.round(v).toLocaleString()}k`,
-    `Add back the charge and subtract out the gain: $${reportedProfit.toLocaleString()}k + ` +
-      `$${charge.toLocaleString()}k − $${gain.toLocaleString()}k = $${underlyingProfit.toLocaleString()}k.`
-  );
-}
-
 function genUnitConversionTrap() {
   const dailyCost = randInt(150, 600) * 10;
   const daysPerWeek = 5;
@@ -754,7 +713,6 @@ function genUnitConversionTrap() {
 }
 
 const STANDARD_GENERATORS = [
-  genAlgebra,
   genWeightedAverage,
   genOppositeSpeed,
   genSimultaneous,
@@ -774,7 +732,6 @@ const CLOSE_READING_GENERATORS = [
   genMarkupVsMargin,
   genReverseGrowth,
   genSecondHighestWithDistraction,
-  genExcludingOneOff,
   genUnitConversionTrap,
 ];
 
@@ -861,6 +818,42 @@ function buildLogicGameConstraints(people, groups, ordered) {
   return constraints;
 }
 
+// A quantitative constraint that compares a numeric attribute (summed per
+// group) between two groups, rather than just people's positions — so a
+// candidate option can't be checked off by eyeballing one rule at a time;
+// the actual totals have to be worked out first.
+function buildQuantitativeConstraint(people, groups, attrOf) {
+  const idxOf = logicGameIndexOf(groups);
+  const sumsFor = (gi) => {
+    const sums = [0, 0, 0];
+    people.forEach((p) => {
+      sums[gi(p)] += attrOf[p];
+    });
+    return sums;
+  };
+  const actualSums = sumsFor(idxOf);
+
+  const pairs = shuffleInPlace([
+    [0, 1],
+    [0, 2],
+    [1, 2],
+  ]);
+  for (const [a, b] of pairs) {
+    if (actualSums[a] === actualSums[b]) continue;
+    const [greater, lesser] = actualSums[a] > actualSums[b] ? [a, b] : [b, a];
+    return {
+      check: (gi) => {
+        const sums = sumsFor(gi);
+        return sums[greater] > sums[lesser];
+      },
+      describe: (labels) =>
+        `The combined years of experience of everyone in ${labels.names[greater]} is greater than the ` +
+        `combined years of experience of everyone in ${labels.names[lesser]}.`,
+    };
+  }
+  return null; // all three group sums tied — caller should reroll the attribute values
+}
+
 function genLogicGame() {
   const templates = [
     {
@@ -869,9 +862,10 @@ function genLogicGame() {
       groupNoun: "shift",
       groupLabels: ["the Morning shift", "the Afternoon shift", "the Evening shift"],
       groupShortLabels: ["Morning", "Afternoon", "Evening"],
-      intro: (people) =>
-        `Six employees — ${people.join(", ")} — must each be assigned to one of three shifts: Morning, ` +
-        `Afternoon, or Evening. Exactly two employees are assigned to each shift.`,
+      intro: (peopleLabels) =>
+        `Six employees — ${peopleLabels.join(", ")} — must each be assigned to one of three shifts: ` +
+        `Morning, Afternoon, or Evening. Exactly two employees are assigned to each shift. (Each ` +
+        `employee's years of experience is shown in parentheses.)`,
     },
     {
       ordered: false,
@@ -879,9 +873,10 @@ function genLogicGame() {
       groupNoun: "team",
       groupLabels: ["Team 1", "Team 2", "Team 3"],
       groupShortLabels: ["Team 1", "Team 2", "Team 3"],
-      intro: (people) =>
-        `Six consultants — ${people.join(", ")} — must each be assigned to one of three project teams: ` +
-        `Team 1, Team 2, or Team 3. Exactly two consultants are assigned to each team.`,
+      intro: (peopleLabels) =>
+        `Six consultants — ${peopleLabels.join(", ")} — must each be assigned to one of three project ` +
+        `teams: Team 1, Team 2, or Team 3. Exactly two consultants are assigned to each team. (Each ` +
+        `consultant's years of experience is shown in parentheses.)`,
     },
   ];
   const template = choice(templates);
@@ -892,6 +887,15 @@ function genLogicGame() {
   const idxOf = logicGameIndexOf(groups);
 
   const constraints = buildLogicGameConstraints(people, groups, template.ordered);
+
+  const attrOf = {};
+  people.forEach((p) => {
+    attrOf[p] = randInt(1, 15);
+  });
+  const quantConstraint = buildQuantitativeConstraint(people, groups, attrOf);
+  if (!quantConstraint) return genLogicGame(); // all group totals tied — reroll
+  constraints.push(quantConstraint);
+
   const labels = { noun: template.groupNoun, names: template.groupLabels };
   const satisfiesAll = (gi) => constraints.every((c) => c.check(gi));
 
@@ -899,10 +903,18 @@ function genLogicGame() {
 
   const correctString = logicGameFormat(template.groupShortLabels, groups);
   const seenKeys = new Set([logicGameKey(groups)]);
-  const distractorStrings = [];
+  let distractorCandidates = []; // { groups, failVector } — failVector[i] = true if this candidate breaks rule i
+
+  // No single rule should be enough, on its own, to rule out every wrong
+  // answer: that would let someone eliminate options by checking just one
+  // rule. So reject any trio of distractors that all happen to break the
+  // same rule, and keep searching (with limited backtracking) until none do.
+  const sharesCommonFailedRule = (trio) =>
+    constraints.some((_, i) => trio.every((d) => d.failVector[i]));
 
   let attempts = 0;
-  while (distractorStrings.length < 3 && attempts < 400) {
+  let stuckAttempts = 0;
+  while (distractorCandidates.length < 3 && attempts < 600) {
     attempts++;
     const candidate = groups.map((g) => [...g]);
     const swaps = choice([1, 1, 2]);
@@ -918,14 +930,30 @@ function genLogicGame() {
     }
     const key = logicGameKey(candidate);
     if (seenKeys.has(key)) continue;
-    if (satisfiesAll(logicGameIndexOf(candidate))) continue; // would be a second correct answer
+    const candidateIdx = logicGameIndexOf(candidate);
+    if (satisfiesAll(candidateIdx)) continue; // would be a second correct answer
+    const failVector = constraints.map((c) => !c.check(candidateIdx));
+    const trial = [...distractorCandidates, { groups: candidate, failVector }];
+    if (trial.length === 3 && sharesCommonFailedRule(trial)) {
+      stuckAttempts++;
+      if (stuckAttempts > 150 && distractorCandidates.length > 0) {
+        distractorCandidates.pop(); // backtrack: our last pick is blocking every remaining option
+        stuckAttempts = 0;
+      }
+      continue;
+    }
     seenKeys.add(key);
-    distractorStrings.push(logicGameFormat(template.groupShortLabels, candidate));
+    distractorCandidates.push({ groups: candidate, failVector });
+    stuckAttempts = 0;
   }
-  if (distractorStrings.length < 3) return genLogicGame(); // couldn't find enough distinct wrong options
+  if (distractorCandidates.length < 3) return genLogicGame(); // couldn't find enough distinct wrong options
+
+  const distractorStrings = distractorCandidates.map((d) => logicGameFormat(template.groupShortLabels, d.groups));
+
+  const peopleLabels = people.map((p) => `${p} (${attrOf[p]} yrs)`);
 
   const prompt =
-    `${template.intro(people)}\n\n` +
+    `${template.intro(peopleLabels)}\n\n` +
     `Rules:\n` +
     constraints.map((c, i) => `${i + 1}. ${c.describe(labels)}`).join("\n") +
     `\n\nWhich one of the following could be an accurate assignment of ${template.personNoun} to ` +
