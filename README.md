@@ -65,8 +65,10 @@ python3 -m http.server 8000
   case/accounting topics (weighted averages, speed/distance with staggered
   departure times, simultaneous equations, percentages, ratios (three
   always-distinct department headcounts combined with a growth rate), work
-  rate, compound growth, mixtures, gross margin, break-even analysis,
-  contribution margin, and payback period).
+  rate, compound growth, continuous ("grows continuously at a rate of...")
+  growth that requires the exponential growth formula rather than discrete
+  compounding, mixtures, gross margin, break-even analysis, contribution
+  margin, and payback period).
 - No charts, graphs, or diagrams — every question is text only, as requested;
   the logic game states its rules as a plain numbered list.
 - Shows a **countdown timer** against a **recommended completion time of

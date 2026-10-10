@@ -364,6 +364,37 @@ function genCompoundGrowth() {
   );
 }
 
+function genContinuousGrowth() {
+  const initialPopulation = randInt(5, 50) * 100;
+  const ratePct = choice([3, 4, 5, 6, 7, 8, 9, 10, 12]);
+  const rate = ratePct / 100;
+  const hours = randInt(3, 10);
+  const finalPopulation = Math.round(initialPopulation * Math.exp(rate * hours));
+
+  const prompt =
+    `A bacteria culture in a lab starts with ${initialPopulation.toLocaleString()} cells and grows ` +
+    `continuously at a rate of ${ratePct}% per hour. Approximately how many cells will the culture ` +
+    `contain after ${hours} hours, to the nearest whole number?`;
+
+  const discreteCompound = Math.round(initialPopulation * Math.pow(1 + rate, hours)); // treated it like once-per-period compounding instead of continuous growth
+  const linearGrowth = Math.round(initialPopulation * (1 + rate * hours)); // treated the rate as simple, linear growth
+  const doubleConvertedRate = Math.round(initialPopulation * Math.exp((rate / 100) * hours)); // divided the already-decimal rate by 100 a second time
+  const distractors = [discreteCompound, linearGrowth, doubleConvertedRate, Math.round(finalPopulation * 1.1)];
+
+  return buildQuestion(
+    "Continuous growth",
+    prompt,
+    finalPopulation,
+    distractors,
+    (v) => `${Math.round(v).toLocaleString()} cells`,
+    `Continuous growth compounds at every instant rather than once per period, so the population follows ` +
+      `P = P₀ × e^(rt): ${initialPopulation.toLocaleString()} × e^(${rate} × ${hours}) = ` +
+      `${initialPopulation.toLocaleString()} × e^${(rate * hours).toFixed(2)} ≈ ` +
+      `${finalPopulation.toLocaleString()} cells. Using the once-per-period compounding formula ` +
+      `(1 + r)^t, or treating the growth as linear, both undercount true continuous growth.`
+  );
+}
+
 function genMixture() {
   const volA = randInt(10, 35) * 5;
   const volB = randInt(10, 35) * 5;
@@ -801,6 +832,7 @@ const STANDARD_GENERATORS = [
   genRatio,
   genWorkRate,
   genCompoundGrowth,
+  genContinuousGrowth,
   genMixture,
   genCatchUp,
   genGrossMargin,
