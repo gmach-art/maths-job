@@ -46,40 +46,41 @@ python3 -m http.server 8000
 
 ## What the Prep quiz does
 
-- Generates **10 multiple-choice questions** per attempt, with randomised
-  numbers so every playthrough is different: **one LSAT-style logic game**
-  every time (a scheduling or grouping constraint-satisfaction puzzle — six
-  people assigned to three groups under five rules of varied types —
-  an "exactly one of X/Y in group K" rule, an "at most one of X/Y/Z in
-  group K" counting rule, a relative-order rule, an if-then conditional, and
-  a quantitative rule comparing a numeric total between two groups — so no
-  single rule, checked alone, is ever enough to eliminate every wrong
-  answer), **4 close-reading questions** sampled from a pool of 5 (a margin
-  vs. markup conversion followed by a clearance discount, a three-step
-  revenue reversal that may include a decline partway through, a ranking
-  question where revenue must first be projected forward by a growth rate
-  before the regions can be ranked, a staffing-cost question mixing
-  full-time and part-time schedules, or a threshold/marginal commission
-  calculation — details that are easy to miss and that take real work to
-  untangle), plus 5 more sampled from a pool of word-problem and
-  case/accounting topics (weighted averages, speed/distance with staggered
-  departure times, simultaneous equations, percentages, ratios (three
-  always-distinct department headcounts combined with a growth rate), work
-  rate, compound growth, growth forecasting (given only two historical data
-  points, project a business metric forward past the end of the data — which
-  only resolves correctly by fitting a constant growth rate between the two
-  points and compounding it forward, not by extending a straight line),
-  mixtures, gross margin, break-even analysis, contribution margin, payback
-  period, single-elimination tournament brackets (how many matches total from
-  a given round up to the Final), and doubling time (a share or metric
-  doubles every N months — how long until it reaches a target level, which
-  only resolves with a logarithm since the target rarely lines up with a
-  whole number of doublings).
+- Generates **22 multiple-choice questions** per attempt — one of every
+  question type currently in the trainer, shuffled into a different order
+  each time with freshly randomised numbers, so no type is ever left out and
+  no playthrough repeats the last one. That's: **one LSAT-style logic game**
+  (a scheduling or grouping constraint-satisfaction puzzle — six people
+  assigned to three groups under five rules of varied types — an "exactly
+  one of X/Y in group K" rule, an "at most one of X/Y/Z in group K" counting
+  rule, a relative-order rule, an if-then conditional, and a quantitative
+  rule comparing a numeric total between two groups — so no single rule,
+  checked alone, is ever enough to eliminate every wrong answer), **5
+  close-reading questions** (a margin vs. markup conversion followed by a
+  clearance discount, a three-step revenue reversal that may include a
+  decline partway through, a ranking question where revenue must first be
+  projected forward by a growth rate before the regions can be ranked, a
+  staffing-cost question mixing full-time and part-time schedules, and a
+  threshold/marginal commission calculation — details that are easy to miss
+  and that take real work to untangle), plus **16 word-problem and
+  case/accounting questions** (weighted averages, speed/distance with
+  staggered departure times, simultaneous equations, percentages, ratios
+  (three always-distinct department headcounts combined with a growth
+  rate), work rate, compound growth, growth forecasting (given only two
+  historical data points, project a business metric forward past the end
+  of the data — which only resolves correctly by fitting a constant growth
+  rate between the two points and compounding it forward, not by extending
+  a straight line), mixtures, gross margin, break-even analysis,
+  contribution margin, payback period, single-elimination tournament
+  brackets (how many matches total from a given round up to the Final), and
+  doubling time (a share or metric doubles every N months — how long until
+  it reaches a target level, which only resolves with a logarithm since the
+  target rarely lines up with a whole number of doublings)).
 - No charts, graphs, or diagrams — every question is text only, as requested;
   the logic game states its rules as a plain numbered list.
 - Shows a **countdown timer** against a **recommended completion time of
-  11:00** (about 66 seconds per question — a tighter pace than a typical
-  assessment centre). The test auto-submits if time runs out.
+  22:00** (1 minute per question — the allotted time always matches the
+  question count). The test auto-submits if time runs out.
 - Answers lock in once selected (no changing your mind, like the real thing),
   and a full review with worked explanations is shown at the end.
 - Most questions require at least two reasoning steps (e.g. solving for an

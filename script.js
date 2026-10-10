@@ -1,8 +1,8 @@
 "use strict";
 
-const TARGET_SECONDS = 11 * 60; // recommended completion time
-const TOTAL_QUESTIONS = 10;
-const CLOSE_READING_COUNT = 4;
+const TOTAL_QUESTIONS = 22; // one of every question type currently in the generator pools
+const TARGET_SECONDS = TOTAL_QUESTIONS * 60; // recommended completion time: 1 minute per question
+const CLOSE_READING_COUNT = 5;
 const LOGIC_GAME_COUNT = 1;
 const HISTORY_KEY = "numericalReasoningTrainerHistory";
 const HISTORY_LIMIT = 30;
@@ -39,6 +39,18 @@ function shuffleInPlace(arr) {
 
 function sampleGenerators(pool, count) {
   return shuffleInPlace([...pool]).slice(0, count);
+}
+
+// Evenly spaced gridline values for the progress chart's y-axis, from 0 up
+// to (but not exceeding) maxValue, using a "nice" step size so the chart
+// reads sensibly regardless of how many total questions there are.
+function progressChartTicks(maxValue) {
+  const niceSteps = [1, 2, 5, 10, 20, 25, 50, 100];
+  const roughStep = maxValue / 5;
+  const step = niceSteps.find((s) => s >= roughStep) || niceSteps[niceSteps.length - 1];
+  const ticks = [];
+  for (let t = 0; t <= maxValue; t += step) ticks.push(t);
+  return ticks;
 }
 
 /* ---------- attempt history (persisted locally per browser) ---------- */
@@ -1197,10 +1209,10 @@ function genLogicGame() {
 const LOGIC_GAME_GENERATORS = [genLogicGame];
 
 function buildQuestionSet() {
-  // One LSAT-style logic game every attempt, a handful of close-reading
-  // questions (details that are easy to miss), and a random spread of
-  // standard case-math and word problems to fill out the rest — so every
-  // playthrough is different.
+  // TOTAL_QUESTIONS/CLOSE_READING_COUNT/LOGIC_GAME_COUNT are sized to match
+  // every generator currently defined, so each playthrough includes one of
+  // every question type in circulation (shuffled into a different order and
+  // with freshly randomised numbers each time).
   const logicGamePicks = sampleGenerators(LOGIC_GAME_GENERATORS, Math.min(LOGIC_GAME_COUNT, LOGIC_GAME_GENERATORS.length));
   const closeReadingPicks = sampleGenerators(CLOSE_READING_GENERATORS, Math.min(CLOSE_READING_COUNT, CLOSE_READING_GENERATORS.length));
   const standardCount = TOTAL_QUESTIONS - logicGamePicks.length - closeReadingPicks.length;
@@ -1386,9 +1398,9 @@ function renderResults(elapsedSeconds, timedOut, score, history) {
     el.paceMessage.textContent = `You finished with ${formatClock(TARGET_SECONDS - elapsedSeconds)} to spare — nice pace.`;
   }
 
-  if (score >= 8) {
+  if (score >= TOTAL_QUESTIONS * 0.8) {
     el.resultsHeadline.textContent = "Strong result";
-  } else if (score >= 5) {
+  } else if (score >= TOTAL_QUESTIONS * 0.5) {
     el.resultsHeadline.textContent = "Solid attempt";
   } else {
     el.resultsHeadline.textContent = "Room to improve";
@@ -1459,8 +1471,8 @@ function renderProgressChart(history) {
     `Line chart of score out of ${TOTAL_QUESTIONS} across ${n} attempts, from ${history[0].score} to ${history[n - 1].score}`
   );
 
-  // gridlines + y-axis labels (fixed scale, since scores are always out of 10)
-  [0, 2, 4, 6, 8, 10].forEach((tick) => {
+  // gridlines + y-axis labels, spaced to fit however many questions there are
+  progressChartTicks(TOTAL_QUESTIONS).forEach((tick) => {
     const y = yFor(tick);
     const line = document.createElementNS(svgNS, "line");
     line.setAttribute("x1", marginLeft);
