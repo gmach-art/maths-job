@@ -364,34 +364,47 @@ function genCompoundGrowth() {
   );
 }
 
-function genContinuousGrowth() {
-  const initialPopulation = randInt(5, 50) * 100;
-  const ratePct = choice([3, 4, 5, 6, 7, 8, 9, 10, 12]);
-  const rate = ratePct / 100;
-  const hours = randInt(3, 10);
-  const finalPopulation = Math.round(initialPopulation * Math.exp(rate * hours));
+function genGrowthForecast() {
+  const monthsElapsed = choice([3, 4, 5, 6]);
+  const initialUsers = randInt(20, 200) * 1000;
+  const growthMultiple = choice([1.3, 1.4, 1.5, 1.6, 1.8, 2.0, 2.2, 2.5]);
+  const laterUsers = Math.round((initialUsers * growthMultiple) / 100) * 100;
+  const additionalMonths = choice([2, 3, 4, 5]);
+  const totalMonths = monthsElapsed + additionalMonths;
+  const ratio = laterUsers / initialUsers;
+  const projectedUsers = Math.round((initialUsers * Math.pow(ratio, totalMonths / monthsElapsed)) / 100) * 100;
 
   const prompt =
-    `A bacteria culture in a lab starts with ${initialPopulation.toLocaleString()} cells and grows ` +
-    `continuously at a rate of ${ratePct}% per hour. Approximately how many cells will the culture ` +
-    `contain after ${hours} hours, to the nearest whole number?`;
+    `A startup's monthly active users grew from ${initialUsers.toLocaleString()} in Month 0 to ` +
+    `${laterUsers.toLocaleString()} in Month ${monthsElapsed}, and that growth has been tracking a steady ` +
+    `trend line the whole time. If the user base keeps following that same trend, approximately how many ` +
+    `monthly active users will the startup have in Month ${totalMonths}, to the nearest 100 users?`;
 
-  const discreteCompound = Math.round(initialPopulation * Math.pow(1 + rate, hours)); // treated it like once-per-period compounding instead of continuous growth
-  const linearGrowth = Math.round(initialPopulation * (1 + rate * hours)); // treated the rate as simple, linear growth
-  const doubleConvertedRate = Math.round(initialPopulation * Math.exp((rate / 100) * hours)); // divided the already-decimal rate by 100 a second time
-  const distractors = [discreteCompound, linearGrowth, doubleConvertedRate, Math.round(finalPopulation * 1.1)];
+  const linearExtrapolation =
+    Math.round((laterUsers + ((laterUsers - initialUsers) / monthsElapsed) * additionalMonths) / 100) * 100; // extended the trend as a straight line instead of compounding it
+  const invertedExponent = Math.round((initialUsers * Math.pow(ratio, monthsElapsed / totalMonths)) / 100) * 100; // flipped the exponent's numerator and denominator
+  const repeatedFullMultiple = Math.round((laterUsers * ratio) / 100) * 100; // reapplied the entire Month-0-to-Month-N multiple again, ignoring that the forecast window is a different length
+  const distractors = [
+    linearExtrapolation,
+    invertedExponent,
+    repeatedFullMultiple,
+    Math.round((projectedUsers * 1.1) / 100) * 100,
+  ];
 
   return buildQuestion(
-    "Continuous growth",
+    "Growth forecasting",
     prompt,
-    finalPopulation,
+    projectedUsers,
     distractors,
-    (v) => `${Math.round(v).toLocaleString()} cells`,
-    `Continuous growth compounds at every instant rather than once per period, so the population follows ` +
-      `P = P₀ × e^(rt): ${initialPopulation.toLocaleString()} × e^(${rate} × ${hours}) = ` +
-      `${initialPopulation.toLocaleString()} × e^${(rate * hours).toFixed(2)} ≈ ` +
-      `${finalPopulation.toLocaleString()} cells. Using the once-per-period compounding formula ` +
-      `(1 + r)^t, or treating the growth as linear, both undercount true continuous growth.`
+    (v) => `${Math.round(v).toLocaleString()} users`,
+    `The two data points imply a constant growth rate of (${laterUsers.toLocaleString()} ÷ ` +
+      `${initialUsers.toLocaleString()}) per ${monthsElapsed}-month stretch, compounding continuously in ` +
+      `between. Projecting that rate ${additionalMonths} months beyond the data given, to Month ` +
+      `${totalMonths}, means raising the ratio to the power of how many ${monthsElapsed}-month stretches ` +
+      `that spans: ${initialUsers.toLocaleString()} × (${laterUsers.toLocaleString()} ÷ ` +
+      `${initialUsers.toLocaleString()})^(${totalMonths}/${monthsElapsed}) ≈ ` +
+      `${projectedUsers.toLocaleString()} users. Extending the trend as a straight line, instead of ` +
+      `compounding it, understates how fast it's actually accelerating.`
   );
 }
 
@@ -832,7 +845,7 @@ const STANDARD_GENERATORS = [
   genRatio,
   genWorkRate,
   genCompoundGrowth,
-  genContinuousGrowth,
+  genGrowthForecast,
   genMixture,
   genCatchUp,
   genGrossMargin,
