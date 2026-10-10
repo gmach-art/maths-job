@@ -69,8 +69,12 @@ python3 -m http.server 8000
   points, project a business metric forward past the end of the data — which
   only resolves correctly by fitting a constant growth rate between the two
   points and compounding it forward, not by extending a straight line),
-  mixtures, gross margin, break-even analysis, contribution margin, and
-  payback period).
+  mixtures, gross margin, break-even analysis, contribution margin, payback
+  period, single-elimination tournament brackets (how many matches total from
+  a given round up to the Final), and doubling time (a share or metric
+  doubles every N months — how long until it reaches a target level, which
+  only resolves with a logarithm since the target rarely lines up with a
+  whole number of doublings).
 - No charts, graphs, or diagrams — every question is text only, as requested;
   the logic game states its rules as a plain numbered list.
 - Shows a **countdown timer** against a **recommended completion time of

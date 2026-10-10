@@ -627,6 +627,70 @@ function genPaybackPeriod() {
   );
 }
 
+function genTournamentBracket() {
+  const bracketSize = choice([16, 32, 64, 128]);
+  const totalMatches = bracketSize - 1;
+  const numberOfRounds = Math.round(Math.log2(bracketSize));
+
+  const prompt =
+    `A tennis tournament starts with a Round of ${bracketSize} (that is, ${bracketSize} players) and is ` +
+    `single-elimination: every match eliminates the loser, and the field is cut in half each round until ` +
+    `one champion remains after the Final. How many matches are played in total, from the Round of ` +
+    `${bracketSize} through to the Final?`;
+
+  const countedRoundsNotMatches = numberOfRounds; // confused the number of rounds with the number of matches
+  const firstRoundOnly = bracketSize / 2; // only counted matches in the opening round
+  const usedFieldSizeDirectly = bracketSize; // forgot that one player (the eventual champion) is never eliminated
+  const forgotTheFinal = bracketSize - 2; // summed the earlier rounds but dropped the Final itself
+  const distractors = [countedRoundsNotMatches, firstRoundOnly, usedFieldSizeDirectly, forgotTheFinal];
+
+  return buildQuestion(
+    "Tournament brackets",
+    prompt,
+    totalMatches,
+    distractors,
+    (v) => `${Math.round(v)} matches`,
+    `Every match eliminates exactly one player, and the tournament must eliminate everyone except the ` +
+      `champion — ${bracketSize} − 1 = ${totalMatches} players — so there are ${totalMatches} matches in ` +
+      `total, however the rounds are split up (it doesn't matter that there are ${numberOfRounds} rounds). ` +
+      `Counting rounds instead of matches, counting only the first round (${firstRoundOnly} matches), or ` +
+      `forgetting to include the Final itself, all give the wrong total.`
+  );
+}
+
+function genMarketShareDoubling() {
+  const currentSharePct = choice([3, 4, 5, 6, 8, 10, 12, 15]);
+  const doublingMonths = choice([3, 4, 6, 8, 9, 12]);
+  const targetSharePct = 50;
+  const growthMultiple = targetSharePct / currentSharePct;
+  const requiredDoublings = Math.log2(growthMultiple);
+  const requiredMonths = round1(doublingMonths * requiredDoublings);
+
+  const prompt =
+    `A startup currently holds ${currentSharePct}% market share, and that share has been doubling every ` +
+    `${doublingMonths} months. If that doubling rate continues, approximately how many months from now ` +
+    `until the company reaches ${targetSharePct}% market share, to 1 decimal place?`;
+
+  const roundedDoublingsUp = doublingMonths * Math.ceil(requiredDoublings); // rounded the number of doublings up to a whole number first
+  const linearScale = round1(doublingMonths * (growthMultiple - 1)); // scaled the time linearly with the growth multiple instead of logarithmically
+  const forgotToMultiplyByPeriod = round1(requiredDoublings); // found the number of doublings but forgot to multiply by the doubling period
+  const usedNaturalLog = round1(doublingMonths * Math.log(growthMultiple)); // used natural log instead of log base 2
+  const distractors = [roundedDoublingsUp, linearScale, forgotToMultiplyByPeriod, usedNaturalLog];
+
+  return buildQuestion(
+    "Doubling time",
+    prompt,
+    requiredMonths,
+    distractors,
+    (v) => `${v.toFixed(1)} months`,
+    `Going from ${currentSharePct}% to ${targetSharePct}% share means the share must multiply by ` +
+      `${growthMultiple.toFixed(2)}×, which takes log₂(${growthMultiple.toFixed(2)}) ≈ ` +
+      `${requiredDoublings.toFixed(2)} doubling periods — not a whole number, since the target doesn't ` +
+      `line up exactly with a doubling. At ${doublingMonths} months per doubling, that's ${doublingMonths} ` +
+      `× ${requiredDoublings.toFixed(2)} ≈ ${requiredMonths.toFixed(1)} months.`
+  );
+}
+
 /* ---------- question generators (close reading) ---------- */
 /* These require catching a detail in the wording — a negation, a direction
    of adjustment, a unit mismatch, or an irrelevant distraction — not just
@@ -852,6 +916,8 @@ const STANDARD_GENERATORS = [
   genBreakeven,
   genContributionMarginRatio,
   genPaybackPeriod,
+  genTournamentBracket,
+  genMarketShareDoubling,
 ];
 
 const CLOSE_READING_GENERATORS = [
