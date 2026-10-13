@@ -703,99 +703,220 @@ function genMarketShareDoubling() {
   );
 }
 
-/* Shipping-container questions, modelled on a Bain case interview: an
-   internal container of 12.036 m × 2.253 m × 2.285 m (length × width ×
-   height). The packing counts below were checked offline with an exhaustive
-   guillotine-cut search over every orientation, not just the obvious one. */
-const CONTAINER_DIMS = { length: 12.036, width: 2.253, height: 2.285 };
+/* Shipping-container questions, modelled on a Bain case interview (the
+   original used a 12.036 m × 2.253 m × 2.285 m container and 1.22 m × 0.5 m ×
+   0.5 m boxes, where the best loading is 180). Every attempt randomises the
+   container and box sizes. The loading rule stated in the prompt — at most
+   three rectangular sections made by straight dividing walls, every box in a
+   section facing the same way — keeps the problem solvable by hand, and the
+   answer is found by searching every orientation and every wall position that
+   lines up with a combination of box sides. All lengths are handled
+   internally in whole millimetres. */
 
-function containerDescription() {
-  return `${CONTAINER_DIMS.length} m long × ${CONTAINER_DIMS.width} m wide × ${CONTAINER_DIMS.height} m high`;
+const BAIN_CONTAINER_MM = [12036, 2253, 2285];
+const BAIN_BOX_MM = [1220, 500, 500];
+
+function boxOrientations(box, allowUpright) {
+  const [a, b, c] = box;
+  const all = [[a, b, c], [a, c, b], [b, a, c], [b, c, a], [c, a, b], [c, b, a]];
+  const longest = Math.max(a, b, c);
+  const seen = new Set();
+  return all.filter((o) => {
+    if (!allowUpright && o[2] === longest && longest > Math.min(a, b, c)) return false;
+    const key = o.join(",");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+// Wall positions worth trying: whole multiples of a single box side. Any
+// other position can slide back to the furthest edge of the boxes on its near
+// side without losing a box there, which only frees space on the far side.
+function wallPositions(sides, limit) {
+  const positions = new Set();
+  for (const s of sides) for (let x = s; x < limit; x += s) positions.add(x);
+  return [...positions].sort((x, y) => x - y);
+}
+
+// One section, every box facing the same way.
+function packSingle(region, orientations) {
+  let best = { count: 0, sections: [] };
+  for (const o of orientations) {
+    const counts = o.map((side, i) => Math.floor(region[i] / side));
+    const count = counts[0] * counts[1] * counts[2];
+    if (count > best.count) best = { count, sections: [{ dims: region, orientation: o, counts, boxes: count }] };
+  }
+  return best;
+}
+
+// Every way to split a region with one wall into two sub-regions.
+function forEachSplit(region, positionsByAxis, fn) {
+  for (let axis = 0; axis < 3; axis++) {
+    for (const p of positionsByAxis[axis]) {
+      if (p >= region[axis]) break;
+      const a = region.slice();
+      const b = region.slice();
+      a[axis] = p;
+      b[axis] = region[axis] - p;
+      fn(a, b);
+    }
+  }
+}
+
+/**
+ * Best number of boxes using at most `maxSections` (1–3) sections. Returns
+ * { count, sections: [{ dims, orientation, counts, boxes }] }.
+ */
+function packContainer(container, box, { maxSections = 3, allowUpright = true } = {}) {
+  const orientations = boxOrientations(box, allowUpright);
+  const positions = container.map((L) => wallPositions([...new Set(box)], L));
+  const single = (region) => packSingle(region, orientations);
+  const combine = (x, y) => ({ count: x.count + y.count, sections: [...x.sections, ...y.sections] });
+
+  const twoSections = (region) => {
+    let best = single(region);
+    forEachSplit(region, positions, (a, b) => {
+      if (single(a).count + single(b).count > best.count) best = combine(single(a), single(b));
+    });
+    return best;
+  };
+
+  let best = maxSections === 1 ? single(container) : twoSections(container);
+  if (maxSections === 3) {
+    forEachSplit(container, positions, (a, b) => {
+      const singleA = single(a);
+      const singleB = single(b);
+      // Splitting a section in two can at most double it, so skip splits that can't win.
+      if (singleA.count + singleB.count + Math.max(singleA.count, singleB.count) <= best.count) return;
+      for (const o of [combine(twoSections(a), singleB), combine(singleA, twoSections(b))]) {
+        if (o.count > best.count) best = o;
+      }
+    });
+  }
+  return { count: best.count, sections: best.sections.filter((s) => s.boxes > 0) };
+}
+
+const mStr = (mm) => `${+(mm / 1000).toFixed(3)} m`;
+
+function containerDescriptionMm(c) {
+  return `${mStr(c[0])} long × ${mStr(c[1])} wide × ${mStr(c[2])} high`;
+}
+
+function describeSections(sections) {
+  const axisNames = ["along the length", "across the width", "up the height"];
+  return sections
+    .map((s) => {
+      const longAxis = s.orientation.indexOf(Math.max(...s.orientation));
+      return (
+        `a ${mStr(s.dims[0])} × ${mStr(s.dims[1])} × ${mStr(s.dims[2])} section with the long side ` +
+        `${axisNames[longAxis]} holds ${s.counts.join(" × ")} = ${s.boxes}`
+      );
+    })
+    .join("; ");
+}
+
+const LOADING_RULE =
+  `Boxes can be rotated to any orientation (including stood on end) but can't be cut or squashed. ` +
+  `Loaders may split the container into at most three rectangular sections using straight dividing ` +
+  `walls of no thickness; every box within a section faces the same way, but different sections can ` +
+  `face different ways.`;
+
+// Random container near a standard 40 ft box, and a long, slim box, kept only
+// when mixing orientations genuinely beats the best single orientation — the
+// insight this question exists to test.
+function randomPackingInstance() {
+  for (let attempt = 0; attempt < 40; attempt++) {
+    const container = [randInt(11950, 12100), randInt(2200, 2360), randInt(2200, 2400)];
+    const short1 = randInt(40, 65) * 10;
+    const short2 = choice([short1, randInt(40, 65) * 10]);
+    const long = randInt(95, 140) * 10;
+    const box = [long, short1, short2];
+    const single = packContainer(container, box, { maxSections: 1 }).count;
+    const best = packContainer(container, box);
+    if (best.count >= single + 6) return { container, box, single, best };
+  }
+  const container = BAIN_CONTAINER_MM;
+  const box = BAIN_BOX_MM;
+  return { container, box, single: packContainer(container, box, { maxSections: 1 }).count, best: packContainer(container, box) };
 }
 
 function genContainerPacking() {
-  // Kept at the original interview's numbers: 1.22 m × 0.5 m × 0.5 m boxes.
-  const correct = 180;
-  const singleOrientation = 144; // 9 × 4 × 4: every box laid lengthwise, gaps left empty
-  const lengthwiseThenGap = 156; // 144 plus 12 more squeezed into the 1.056 m gap at the end
-  const allLyingFlat = 168; // never stand a box on end: 4 layers of 42
-  const byVolume = 203; // total volume ÷ box volume, ignoring that boxes can't be cut up
+  const { container, box, single, best } = randomPackingInstance();
+  const correct = best.count;
+  const twoSectionsOnly = packContainer(container, box, { maxSections: 2 }).count;
+  const lyingFlat = packContainer(container, box, { allowUpright: false }).count;
+  const byVolume = Math.floor((container[0] * container[1] * container[2]) / (box[0] * box[1] * box[2]));
+  // Lay every box the best single way, then fill only the slab left at the far end.
+  const singleOrient = boxOrientations(box, true).find(
+    (o) => Math.floor(container[0] / o[0]) * Math.floor(container[1] / o[1]) * Math.floor(container[2] / o[2]) === single
+  );
+  const endGap = container[0] - Math.floor(container[0] / singleOrient[0]) * singleOrient[0];
+  const plusEndGap = single + (endGap > 0 ? packContainer([endGap, container[1], container[2]], box, { maxSections: 2 }).count : 0);
+  const shownBox = shuffleInPlace(box.slice());
+
   const prompt =
-    `A shipping container's internal space measures ${containerDescription()}. A company ships a product ` +
-    `in rigid rectangular boxes measuring 1.22 m × 0.5 m × 0.5 m. Boxes can be rotated to any ` +
-    `orientation (including stood on end) but can't be cut or squashed, and different boxes may face ` +
-    `different ways. What is the greatest number of boxes that fit in one container?`;
+    `A shipping container's internal space measures ${containerDescriptionMm(container)}. A company ` +
+    `ships a product in rigid rectangular boxes measuring ${shownBox.map(mStr).join(" × ")}. ` +
+    `${LOADING_RULE} What is the greatest number of boxes that fit in one container?`;
+
+  const notes = [`every box facing the same way gives at most ${single}`];
+  if (plusEndGap > single && plusEndGap < correct) notes.push(`filling the gap left at the far end only brings that to ${plusEndGap}`);
+  if (twoSectionsOnly < correct && twoSectionsOnly !== plusEndGap) notes.push(`stopping at two sections gives only ${twoSectionsOnly}`);
+  if (lyingFlat < correct) notes.push(`never standing a box on end gives ${lyingFlat}`);
+  notes.push(`dividing volumes (≈${byVolume}) ignores the gaps that boxes can't fill`);
 
   return buildQuestion(
     "Container packing",
     prompt,
     correct,
-    [lengthwiseThenGap, singleOrientation, allLyingFlat, byVolume],
+    [plusEndGap, single, twoSectionsOnly, lyingFlat, byVolume, correct - 4],
     (v) => `${Math.round(v)} boxes`,
-    `The trick is that 1.22 + 0.5 + 0.5 = 2.22 m, which fits inside both the 2.253 m width and the ` +
-      `2.285 m height. So split the height into a 1.22 m section and a 1.0 m section. Bottom 1.22 m: ` +
-      `stand every box on end — 0.5 m footprints fit 24 along the length (12.0 m) × 4 across the width ` +
-      `(2.0 m) = 96. Top 1.0 m: two 0.5 m layers, each split across the width into a 1.22 m strip (boxes ` +
-      `turned crosswise, 24 along the length) and a 1.0 m strip (boxes lengthwise, 9 along × 2 across = ` +
-      `18), so 42 per layer and 84 in total. 96 + 84 = 180. Laying every box lengthwise gives only ` +
-      `9 × 4 × 4 = 144; filling the leftover 1.056 m at the end adds 12 more (156); keeping every box ` +
-      `lying down gives 4 layers × 42 = 168; and dividing volumes (≈203) ignores the wasted gaps.`
+    `Mix orientations so the gap one direction leaves is filled by boxes turned another way. One best ` +
+      `loading: ${describeSections(best.sections)} — ${correct} boxes in total. By contrast, ` +
+      `${notes.join("; ")}.`
   );
 }
 
-// Each product's best fit has its two shorter sides across the width and up
-// the height (in either order) and wastes too little space in every direction
-// for any other orientation to squeeze in.
-const SHIPPING_PRODUCTS = [
-  { dims: [1.2, 0.75, 0.56], perContainer: 120 },
-  { dims: [1.5, 0.75, 0.56], perContainer: 96 },
-  { dims: [1.0, 0.75, 0.56], perContainer: 144 },
-  { dims: [2.0, 0.75, 0.56], perContainer: 72 },
-];
-
 function genShippingCost() {
-  const product = choice(SHIPPING_PRODUCTS);
-  const [longSide, ...shortSides] = product.dims;
-  const shownDims = shuffleInPlace([longSide, ...shortSides]);
-  const perContainer = product.perContainer;
-  const weeklyUnits = randInt(18, 60) * 100 + randInt(1, 99);
+  const container = [randInt(11950, 12100), randInt(2200, 2360), randInt(2200, 2400)];
+  const box = [randInt(80, 200) * 10, randInt(45, 80) * 10, randInt(40, 80) * 10];
+  const packing = packContainer(container, box);
+  const perContainer = packing.count;
+  const shownBox = shuffleInPlace(box.slice());
+  const weeklyUnits = Math.max(randInt(14, 40) * perContainer + randInt(1, perContainer - 1), 100);
   const costPerContainer = randInt(28, 64) * 100 + 50;
   const weeksPerYear = 52;
   const containersPerWeek = Math.ceil(weeklyUnits / perContainer);
   const annualCost = containersPerWeek * costPerContainer * weeksPerYear;
 
   const prompt =
-    `A shipping container's internal space measures ${containerDescription()}. A retailer imports a ` +
-    `product packed in rigid boxes measuring ${shownDims.map((d) => `${d} m`).join(" × ")}, which can be ` +
-    `rotated to any orientation. It must ship ${weeklyUnits.toLocaleString()} boxes every week, each ` +
-    `container sent costs $${costPerContainer.toLocaleString()} regardless of how full it is, and every ` +
-    `week's order ships separately. How much does the retailer spend on shipping over a ` +
-    `${weeksPerYear}-week year?`;
+    `A shipping container's internal space measures ${containerDescriptionMm(container)}. A retailer ` +
+    `imports a product packed in rigid boxes measuring ${shownBox.map(mStr).join(" × ")}. ${LOADING_RULE} ` +
+    `It must ship ${weeklyUnits.toLocaleString()} boxes every week, each container sent costs ` +
+    `$${costPerContainer.toLocaleString()} regardless of how full it is, and every week's order ships ` +
+    `separately. Loading each container as full as possible, how much does the retailer spend on ` +
+    `shipping over a ${weeksPerYear}-week year?`;
 
   // Common slips: no rounding up to whole containers, pooling a year's boxes
-  // before rounding, stopping at one week, or packing in the order the sides are listed.
+  // before rounding, stopping at one week, or packing the boxes in the
+  // orientation their sides happen to be listed in.
   const noRoundUp = (weeklyUnits / perContainer) * costPerContainer * weeksPerYear;
   const pooledYear = Math.ceil((weeklyUnits * weeksPerYear) / perContainer) * costPerContainer;
-  const asListedFit =
-    Math.floor(CONTAINER_DIMS.length / shownDims[0] + 1e-9) *
-    Math.floor(CONTAINER_DIMS.width / shownDims[1] + 1e-9) *
-    Math.floor(CONTAINER_DIMS.height / shownDims[2] + 1e-9);
+  const asListedFit = shownBox.reduce((n, side, i) => n * Math.floor(container[i] / side), 1);
   const asListed =
     asListedFit > 0 && asListedFit !== perContainer
       ? Math.ceil(weeklyUnits / asListedFit) * costPerContainer * weeksPerYear
       : (containersPerWeek + 1) * costPerContainer * weeksPerYear;
   const distractors = [noRoundUp, asListed, pooledYear, containersPerWeek * costPerContainer, annualCost * 1.1];
 
-  const fit = (side, dim) => Math.floor(dim / side + 1e-9);
   return buildQuestion(
     "Shipping cost",
     prompt,
     annualCost,
     distractors,
     (v) => `$${Math.round(v).toLocaleString()}`,
-    `Lay the ${longSide} m side along the ${CONTAINER_DIMS.length} m length (${fit(longSide, CONTAINER_DIMS.length)} fit), ` +
-      `0.75 m across the ${CONTAINER_DIMS.width} m width (${fit(0.75, CONTAINER_DIMS.width)} fit) and 0.56 m up the ` +
-      `${CONTAINER_DIMS.height} m height (${fit(0.56, CONTAINER_DIMS.height)} fit): ${perContainer} boxes per container. ` +
+    `Best loading: ${describeSections(packing.sections)} — ${perContainer} boxes per container. ` +
       `${weeklyUnits.toLocaleString()} ÷ ${perContainer} = ${(weeklyUnits / perContainer).toFixed(2)}, which rounds UP ` +
       `to ${containersPerWeek} containers a week — a part-full container still costs the full rate. Weekly cost = ` +
       `${containersPerWeek} × $${costPerContainer.toLocaleString()} = $${(containersPerWeek * costPerContainer).toLocaleString()}; ` +
