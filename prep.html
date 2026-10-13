@@ -6,9 +6,10 @@
   <title>Prep</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" />
+  <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="menu.css" />
 </head>
-<body>
+<body data-question-bank-only>
   <div class="menu-app">
     <header class="menu-header">
       <a class="back-link" href="index.html">&larr; Menu</a>
@@ -27,6 +28,35 @@
         <span class="menu-box-title">Quick Quiz</span>
       </a>
     </main>
+
+    <section class="chat" aria-label="Ask for a question">
+      <div class="chat-greeting">
+        <span class="chat-mark" aria-hidden="true">✳</span>
+        <h2 id="greeting-title" class="chat-greeting-title">Hello</h2>
+      </div>
+      <p id="greeting-sub" class="chat-greeting-sub"></p>
+
+      <div id="chat-thread" class="chat-thread" aria-live="polite" hidden></div>
+
+      <form id="chat-form" class="chat-form">
+        <label for="chat-input" class="visually-hidden">Ask for a kind of question</label>
+        <textarea id="chat-input" class="chat-input" rows="1" placeholder="Ask for any kind of question…"></textarea>
+        <button type="submit" class="chat-send" aria-label="Send">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </form>
+      <div id="starter-chips" class="chat-chips chat-starters">
+        <button type="button" class="chat-chip">Probability</button>
+        <button type="button" class="chat-chip">Container packing</button>
+        <button type="button" class="chat-chip">A bar chart question</button>
+        <button type="button" class="chat-chip">What I find hard</button>
+      </div>
+    </section>
   </div>
+
+  <script src="stats.js"></script>
+  <script src="script.js"></script>
+  <script src="data-analysis.js"></script>
+  <script src="prep-chat.js"></script>
 </body>
 </html>

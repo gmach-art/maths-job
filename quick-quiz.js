@@ -52,10 +52,10 @@ function weightedSample(items, weightOf, count) {
 function focusReason(bankId, typeId) {
   const entry = window.QuestionStats.get(bankId, typeId);
   if (!entry || entry.attempts < MIN_ATTEMPTS_FOR_FOCUS) return null;
-  const avg = entry.totalSeconds / entry.attempts;
+  const avg = window.QuestionStats.avgSeconds(entry);
   const parts = [];
   if (entry.wrong / entry.attempts >= 0.5) parts.push(`missed ${entry.wrong} of ${entry.attempts} times`);
-  if (avg > SECONDS_PER_QUESTION) parts.push(`averages ${Math.round(avg)}s`);
+  if (avg !== null && avg > SECONDS_PER_QUESTION) parts.push(`averages ${Math.round(avg)}s`);
   return parts.length ? `Focus area — ${parts.join(", ")}` : null;
 }
 
@@ -255,11 +255,11 @@ function renderFocusList() {
   list.className = "info-list";
   rows.slice(0, FOCUS_LIST_SIZE).forEach(({ entry, label }) => {
     const li = document.createElement("li");
-    const avg = Math.round(entry.totalSeconds / entry.attempts);
+    const avg = window.QuestionStats.avgSeconds(entry);
     li.innerHTML = `<strong></strong> <span class="hint"></span>`;
     li.querySelector("strong").textContent = label;
     li.querySelector("span").textContent =
-      `— ${entry.attempts - entry.wrong}/${entry.attempts} correct, ${avg}s on average`;
+      `— ${entry.attempts - entry.wrong}/${entry.attempts} correct` + (avg === null ? "" : `, ${Math.round(avg)}s on average`);
     list.appendChild(li);
   });
   el.focusList.appendChild(list);
