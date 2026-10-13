@@ -142,6 +142,21 @@ python3 -m http.server 8000
   glance, and no question reduces to a single direct read or a plain
   subtraction of two displayed values.
 
+## Asking for a question (Prep page chat)
+
+Below the three games, the Prep page greets you (by time of day, with a
+"welcome back" on return visits and a nudge toward your weakest question
+type once there's enough data) and offers a chat-style box. Type the kind
+of question you want — "give me 3 probability questions", "bain shipping
+container", "a bar chart question", "something random", "what I find
+hard" — and a freshly generated question is typed out in the thread, with
+its chart if it's a Data Analysis type. Answer it to see the worked
+explanation.
+
+There's no AI service behind it: requests are matched against a keyword
+list for every question type (`prep-chat.js`). Answers count toward the
+per-type accuracy stats Quick Quiz uses, but not toward timing.
+
 ## What the Quick Quiz does
 
 - **10 questions in 10 minutes**: 7 from the Numerical Reasoning bank and 3
@@ -174,6 +189,7 @@ python3 -m http.server 8000
 - `data-analysis.js` — chart/table renderers, question generators, quiz engine, timer, and DOM logic
 - `quick-quiz.html` / `quick-quiz.js` — Quick Quiz page and logic (loads both
   question banks)
+- `prep-chat.js` — Prep page greeting and ask-for-a-question chat
 - `stats.js` — per-question-type right/wrong and timing stats shared by all
   three quizzes
 - `style.css` — shared quiz styling (both trainers) plus chart and data-table styles

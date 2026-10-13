@@ -5,8 +5,9 @@
    Each quiz records, for every answered question, whether it was right and
    how long it took (from the question appearing to the answer being locked
    in). Quick Quiz reads this back to favour the question types you get wrong
-   most often or spend longest on. Stored in local storage as
-   { "<bank>:<typeId>": { label, attempts, wrong, totalSeconds } }. */
+   most often or spend longest on. Questions asked for in the Prep chat count
+   toward accuracy only, not timing. Stored in local storage as
+   { "<bank>:<typeId>": { label, attempts, wrong, timedAttempts, totalSeconds } }. */
 window.QuestionStats = (() => {
   const KEY = "questionTypeStats";
   const MAX_SECONDS_COUNTED = 600; // a question left open for ages shouldn't swamp the average
@@ -28,15 +29,30 @@ window.QuestionStats = (() => {
     }
   }
 
+  // Entries saved before untimed answers existed had every attempt timed.
+  function timedAttemptsOf(entry) {
+    return entry.timedAttempts ?? entry.attempts;
+  }
+
+  function avgSeconds(entry) {
+    const timed = entry ? timedAttemptsOf(entry) : 0;
+    return timed ? entry.totalSeconds / timed : null;
+  }
+
+  // Pass `seconds` as null for an untimed answer (counts toward accuracy only).
   function record(bank, question, correct, seconds) {
     if (!question || !question.typeId) return;
     const stats = load();
     const key = `${bank}:${question.typeId}`;
-    const entry = stats[key] || { label: question.category, attempts: 0, wrong: 0, totalSeconds: 0 };
+    const entry = stats[key] || { label: question.category, attempts: 0, wrong: 0, timedAttempts: 0, totalSeconds: 0 };
+    entry.timedAttempts = timedAttemptsOf(entry);
     entry.label = question.category;
     entry.attempts += 1;
     if (!correct) entry.wrong += 1;
-    entry.totalSeconds += Math.min(Math.max(seconds, 0), MAX_SECONDS_COUNTED);
+    if (seconds !== null) {
+      entry.timedAttempts += 1;
+      entry.totalSeconds += Math.min(Math.max(seconds, 0), MAX_SECONDS_COUNTED);
+    }
     stats[key] = entry;
     save(stats);
   }
@@ -55,8 +71,8 @@ window.QuestionStats = (() => {
     const attempts = entry ? entry.attempts : 0;
     const wrong = entry ? entry.wrong : 0;
     const errorRate = (wrong + 1) / (attempts + 3);
-    const avgSeconds = attempts ? entry.totalSeconds / attempts : 0;
-    const slowness = attempts ? Math.min(Math.max(avgSeconds / targetSecondsPerQuestion - 0.75, 0), 1.25) : 0;
+    const avg = avgSeconds(entry);
+    const slowness = avg === null ? 0 : Math.min(Math.max(avg / targetSecondsPerQuestion - 0.75, 0), 1.25);
     return 0.15 + errorRate + 0.5 * slowness;
   }
 
@@ -68,5 +84,5 @@ window.QuestionStats = (() => {
     }
   }
 
-  return { load, record, get, weight, clear };
+  return { load, record, get, weight, avgSeconds, clear };
 })();
