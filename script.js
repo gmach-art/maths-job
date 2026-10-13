@@ -1,6 +1,6 @@
 "use strict";
 
-const TOTAL_QUESTIONS = 22; // one of every question type currently in the generator pools
+const TOTAL_QUESTIONS = 24; // one of every question type currently in the generator pools
 const TARGET_SECONDS = TOTAL_QUESTIONS * 60; // recommended completion time: 1 minute per question
 const CLOSE_READING_COUNT = 5;
 const LOGIC_GAME_COUNT = 1;
@@ -703,6 +703,106 @@ function genMarketShareDoubling() {
   );
 }
 
+/* Shipping-container questions, modelled on a Bain case interview: an
+   internal container of 12.036 m × 2.253 m × 2.285 m (length × width ×
+   height). The packing counts below were checked offline with an exhaustive
+   guillotine-cut search over every orientation, not just the obvious one. */
+const CONTAINER_DIMS = { length: 12.036, width: 2.253, height: 2.285 };
+
+function containerDescription() {
+  return `${CONTAINER_DIMS.length} m long × ${CONTAINER_DIMS.width} m wide × ${CONTAINER_DIMS.height} m high`;
+}
+
+function genContainerPacking() {
+  // Kept at the original interview's numbers: 1.22 m × 0.5 m × 0.5 m boxes.
+  const correct = 180;
+  const singleOrientation = 144; // 9 × 4 × 4: every box laid lengthwise, gaps left empty
+  const lengthwiseThenGap = 156; // 144 plus 12 more squeezed into the 1.056 m gap at the end
+  const allLyingFlat = 168; // never stand a box on end: 4 layers of 42
+  const byVolume = 203; // total volume ÷ box volume, ignoring that boxes can't be cut up
+  const prompt =
+    `A shipping container's internal space measures ${containerDescription()}. A company ships a product ` +
+    `in rigid rectangular boxes measuring 1.22 m × 0.5 m × 0.5 m. Boxes can be rotated to any ` +
+    `orientation (including stood on end) but can't be cut or squashed, and different boxes may face ` +
+    `different ways. What is the greatest number of boxes that fit in one container?`;
+
+  return buildQuestion(
+    "Container packing",
+    prompt,
+    correct,
+    [lengthwiseThenGap, singleOrientation, allLyingFlat, byVolume],
+    (v) => `${Math.round(v)} boxes`,
+    `The trick is that 1.22 + 0.5 + 0.5 = 2.22 m, which fits inside both the 2.253 m width and the ` +
+      `2.285 m height. So split the height into a 1.22 m section and a 1.0 m section. Bottom 1.22 m: ` +
+      `stand every box on end — 0.5 m footprints fit 24 along the length (12.0 m) × 4 across the width ` +
+      `(2.0 m) = 96. Top 1.0 m: two 0.5 m layers, each split across the width into a 1.22 m strip (boxes ` +
+      `turned crosswise, 24 along the length) and a 1.0 m strip (boxes lengthwise, 9 along × 2 across = ` +
+      `18), so 42 per layer and 84 in total. 96 + 84 = 180. Laying every box lengthwise gives only ` +
+      `9 × 4 × 4 = 144; filling the leftover 1.056 m at the end adds 12 more (156); keeping every box ` +
+      `lying down gives 4 layers × 42 = 168; and dividing volumes (≈203) ignores the wasted gaps.`
+  );
+}
+
+// Each product's best fit has its two shorter sides across the width and up
+// the height (in either order) and wastes too little space in every direction
+// for any other orientation to squeeze in.
+const SHIPPING_PRODUCTS = [
+  { dims: [1.2, 0.75, 0.56], perContainer: 120 },
+  { dims: [1.5, 0.75, 0.56], perContainer: 96 },
+  { dims: [1.0, 0.75, 0.56], perContainer: 144 },
+  { dims: [2.0, 0.75, 0.56], perContainer: 72 },
+];
+
+function genShippingCost() {
+  const product = choice(SHIPPING_PRODUCTS);
+  const [longSide, ...shortSides] = product.dims;
+  const shownDims = shuffleInPlace([longSide, ...shortSides]);
+  const perContainer = product.perContainer;
+  const weeklyUnits = randInt(18, 60) * 100 + randInt(1, 99);
+  const costPerContainer = randInt(28, 64) * 100 + 50;
+  const weeksPerYear = 52;
+  const containersPerWeek = Math.ceil(weeklyUnits / perContainer);
+  const annualCost = containersPerWeek * costPerContainer * weeksPerYear;
+
+  const prompt =
+    `A shipping container's internal space measures ${containerDescription()}. A retailer imports a ` +
+    `product packed in rigid boxes measuring ${shownDims.map((d) => `${d} m`).join(" × ")}, which can be ` +
+    `rotated to any orientation. It must ship ${weeklyUnits.toLocaleString()} boxes every week, each ` +
+    `container sent costs $${costPerContainer.toLocaleString()} regardless of how full it is, and every ` +
+    `week's order ships separately. How much does the retailer spend on shipping over a ` +
+    `${weeksPerYear}-week year?`;
+
+  // Common slips: no rounding up to whole containers, pooling a year's boxes
+  // before rounding, stopping at one week, or packing in the order the sides are listed.
+  const noRoundUp = (weeklyUnits / perContainer) * costPerContainer * weeksPerYear;
+  const pooledYear = Math.ceil((weeklyUnits * weeksPerYear) / perContainer) * costPerContainer;
+  const asListedFit =
+    Math.floor(CONTAINER_DIMS.length / shownDims[0] + 1e-9) *
+    Math.floor(CONTAINER_DIMS.width / shownDims[1] + 1e-9) *
+    Math.floor(CONTAINER_DIMS.height / shownDims[2] + 1e-9);
+  const asListed =
+    asListedFit > 0 && asListedFit !== perContainer
+      ? Math.ceil(weeklyUnits / asListedFit) * costPerContainer * weeksPerYear
+      : (containersPerWeek + 1) * costPerContainer * weeksPerYear;
+  const distractors = [noRoundUp, asListed, pooledYear, containersPerWeek * costPerContainer, annualCost * 1.1];
+
+  const fit = (side, dim) => Math.floor(dim / side + 1e-9);
+  return buildQuestion(
+    "Shipping cost",
+    prompt,
+    annualCost,
+    distractors,
+    (v) => `$${Math.round(v).toLocaleString()}`,
+    `Lay the ${longSide} m side along the ${CONTAINER_DIMS.length} m length (${fit(longSide, CONTAINER_DIMS.length)} fit), ` +
+      `0.75 m across the ${CONTAINER_DIMS.width} m width (${fit(0.75, CONTAINER_DIMS.width)} fit) and 0.56 m up the ` +
+      `${CONTAINER_DIMS.height} m height (${fit(0.56, CONTAINER_DIMS.height)} fit): ${perContainer} boxes per container. ` +
+      `${weeklyUnits.toLocaleString()} ÷ ${perContainer} = ${(weeklyUnits / perContainer).toFixed(2)}, which rounds UP ` +
+      `to ${containersPerWeek} containers a week — a part-full container still costs the full rate. Weekly cost = ` +
+      `${containersPerWeek} × $${costPerContainer.toLocaleString()} = $${(containersPerWeek * costPerContainer).toLocaleString()}; ` +
+      `× ${weeksPerYear} weeks = $${annualCost.toLocaleString()}.`
+  );
+}
+
 /* ---------- question generators (close reading) ---------- */
 /* These require catching a detail in the wording — a negation, a direction
    of adjustment, a unit mismatch, or an irrelevant distraction — not just
@@ -930,6 +1030,8 @@ const STANDARD_GENERATORS = [
   genPaybackPeriod,
   genTournamentBracket,
   genMarketShareDoubling,
+  genContainerPacking,
+  genShippingCost,
 ];
 
 const CLOSE_READING_GENERATORS = [

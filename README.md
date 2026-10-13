@@ -46,7 +46,7 @@ python3 -m http.server 8000
 
 ## What the Prep quiz does
 
-- Generates **22 multiple-choice questions** per attempt — one of every
+- Generates **24 multiple-choice questions** per attempt — one of every
   question type currently in the trainer, shuffled into a different order
   each time with freshly randomised numbers, so no type is ever left out and
   no playthrough repeats the last one. That's: **one LSAT-style logic game**
@@ -62,7 +62,7 @@ python3 -m http.server 8000
   projected forward by a growth rate before the regions can be ranked, a
   staffing-cost question mixing full-time and part-time schedules, and a
   threshold/marginal commission calculation — details that are easy to miss
-  and that take real work to untangle), plus **16 word-problem and
+  and that take real work to untangle), plus **18 word-problem and
   case/accounting questions** (weighted averages, speed/distance with
   staggered departure times, simultaneous equations, percentages, ratios
   (three always-distinct department headcounts combined with a growth
@@ -75,11 +75,17 @@ python3 -m http.server 8000
   brackets (how many matches total from a given round up to the Final), and
   doubling time (a share or metric doubles every N months — how long until
   it reaches a target level, which only resolves with a logarithm since the
-  target rarely lines up with a whole number of doublings)).
+  target rarely lines up with a whole number of doublings), and two
+  Bain-style shipping-container questions — how many 1.22 × 0.5 × 0.5 m
+  boxes fit in a 12.036 × 2.253 × 2.285 m container when boxes can be
+  rotated and mixed in orientation (180: the obvious all-lengthwise packing
+  gives only 144), and a shipping-spend question where a different box
+  size must be oriented to fit, the weekly order rounded up to whole
+  containers, and the cost carried across a year).
 - No charts, graphs, or diagrams — every question is text only, as requested;
   the logic game states its rules as a plain numbered list.
 - Shows a **countdown timer** against a **recommended completion time of
-  22:00** (1 minute per question — the allotted time always matches the
+  24:00** (1 minute per question — the allotted time always matches the
   question count). The test auto-submits if time runs out.
 - Answers lock in once selected (no changing your mind, like the real thing),
   and a full review with worked explanations is shown at the end.
