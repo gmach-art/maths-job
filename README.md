@@ -9,7 +9,7 @@ BCG online test, SHL numerical reasoning, etc.).
 No build step or server required — just open `index.html` in a browser. It
 opens on a main menu with three sections: **Companies**, **Networking**, and
 **Prep**. Prep opens its own submenu of practice tools: the Numerical
-Reasoning quiz and the Data Analysis quiz, both described below.
+Reasoning quiz, the Data Analysis quiz, and the Quick Quiz, all described below.
 
 Companies has two subsections: **Following**, where you search for and
 follow companies you're interested in — big or small, e.g. Google, Meta,
@@ -142,6 +142,21 @@ python3 -m http.server 8000
   glance, and no question reduces to a single direct read or a plain
   subtraction of two displayed values.
 
+## What the Quick Quiz does
+
+- **10 questions in 10 minutes**: 7 from the Numerical Reasoning bank and 3
+  chart/table questions from the Data Analysis bank, shuffled together.
+- It favours your weak spots. Every quiz records, per question type, whether
+  you got it right and how long you took to lock in an answer (in
+  `stats.js`, saved in the browser's local storage). Quick Quiz then picks
+  question types by weighted random draw: types you often miss, or average
+  more than ~45 seconds on, come up much more often, while unseen and
+  mastered types still appear now and then. With no answers recorded yet,
+  every type is equally likely.
+- The results screen ranks your five weakest question types (once each has
+  at least two answers), and the review marks which questions were chosen
+  as focus areas and why.
+
 ## Files
 
 - `index.html` — main menu (Companies / Networking / Prep)
@@ -152,9 +167,13 @@ python3 -m http.server 8000
 - `worker/news-proxy.js` — optional free Cloudflare Worker that fetches real
   article links for the News subsection (see `worker/README.md`)
 - `networking.html` — networking section (placeholder)
-- `prep.html` — prep submenu (Numerical Reasoning Test, Data Analysis)
+- `prep.html` — prep submenu (Numerical Reasoning Test, Data Analysis, Quick Quiz)
 - `numerical-reasoning.html` — quiz page structure and screens (start / quiz / results)
 - `script.js` — numerical reasoning question generators, quiz engine, timer, and DOM logic
 - `data-analysis.html` — data analysis quiz page structure and screens (start / quiz / results)
 - `data-analysis.js` — chart/table renderers, question generators, quiz engine, timer, and DOM logic
+- `quick-quiz.html` / `quick-quiz.js` — Quick Quiz page and logic (loads both
+  question banks)
+- `stats.js` — per-question-type right/wrong and timing stats shared by all
+  three quizzes
 - `style.css` — shared quiz styling (both trainers) plus chart and data-table styles

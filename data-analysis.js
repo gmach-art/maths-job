@@ -1,5 +1,9 @@
 "use strict";
 
+// Everything is wrapped in one function scope so Quick Quiz can load this
+// question bank alongside the other one without their helpers clashing.
+(() => {
+
 const TARGET_SECONDS = 18 * 60; // recommended completion time
 const TOTAL_QUESTIONS = 15;
 const CLOSE_READING_COUNT = 4;
@@ -1403,9 +1407,22 @@ function buildQuestionSet() {
   const closeReadingPicks = sampleGenerators(CLOSE_READING_GENERATORS, Math.min(CLOSE_READING_COUNT, CLOSE_READING_GENERATORS.length));
   const standardCount = TOTAL_QUESTIONS - closeReadingPicks.length;
   const standardPicks = sampleGenerators(STANDARD_GENERATORS, Math.min(standardCount, STANDARD_GENERATORS.length));
-  const questions = [...closeReadingPicks, ...standardPicks].map((gen) => gen());
+  const questions = [...closeReadingPicks, ...standardPicks].map((gen) => Object.assign(gen(), { typeId: gen.name }));
   return shuffleInPlace(questions);
 }
+
+/* ---------- shared question bank ---------- */
+/* Quick Quiz draws from this, tagging each question with its generator's
+   name so per-type stats (stats.js) line up across quizzes. */
+
+window.DataAnalysisBank = {
+  id: "data-analysis",
+  targetSecondsPerQuestion: 72,
+  generators: [...CLOSE_READING_GENERATORS, ...STANDARD_GENERATORS],
+};
+
+// On the Quick Quiz page only the bank is needed, not this quiz's own UI.
+if (document.body.hasAttribute("data-question-bank-only")) return;
 
 /* ---------- quiz state & DOM wiring ---------- */
 
@@ -1418,6 +1435,7 @@ const state = {
   secondsLeft: TARGET_SECONDS,
   timerId: null,
   startedAt: null,
+  questionShownAt: null, // when the current question appeared, for per-type timing stats
   finished: false,
 };
 
@@ -1496,6 +1514,7 @@ function renderQuestion() {
   const q = state.questions[state.index];
   state.pendingIndex = null;
   state.confirmed = false;
+  state.questionShownAt = Date.now();
 
   el.questionCounter.textContent = `Question ${state.index + 1} of ${TOTAL_QUESTIONS}`;
   el.progressFill.style.width = `${((state.index + 1) / TOTAL_QUESTIONS) * 100}%`;
@@ -1539,6 +1558,7 @@ function confirmAnswer() {
     correct: state.pendingIndex === q.correctIndex,
   };
   state.confirmed = true;
+  window.QuestionStats.record("data-analysis", q, state.answers[state.index].correct, (Date.now() - state.questionShownAt) / 1000);
 
   el.nextBtn.textContent = state.index === TOTAL_QUESTIONS - 1 ? "See results" : "Next question";
 }
@@ -1564,6 +1584,10 @@ function finishQuiz(timedOut) {
   if (state.finished) return;
   state.finished = true;
   clearInterval(state.timerId);
+  if (timedOut && !state.confirmed) {
+    // The question on screen when time ran out counts as missed.
+    window.QuestionStats.record("data-analysis", state.questions[state.index], false, (Date.now() - state.questionShownAt) / 1000);
+  }
 
   const elapsedSeconds = timedOut ? TARGET_SECONDS : Math.round((Date.now() - state.startedAt) / 1000);
   const score = state.answers.filter((a) => a && a.correct).length;
@@ -1804,3 +1828,4 @@ el.clearHistoryBtn.addEventListener("click", () => {
   renderProgressChart([]);
   renderProgressTable([]);
 });
+})();
