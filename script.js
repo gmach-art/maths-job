@@ -1,6 +1,6 @@
 "use strict";
 
-const TOTAL_QUESTIONS = 24; // one of every question type currently in the generator pools
+const TOTAL_QUESTIONS = 26; // one of every question type currently in the generator pools
 const TARGET_SECONDS = TOTAL_QUESTIONS * 60; // recommended completion time: 1 minute per question
 const CLOSE_READING_COUNT = 5;
 const LOGIC_GAME_COUNT = 1;
@@ -924,6 +924,212 @@ function genShippingCost() {
   );
 }
 
+/* Counting and probability questions. Each generator picks one of several
+   scenarios (with freshly randomised numbers), so the same question type
+   doesn't always reduce to the same formula. */
+
+function factorial(n) {
+  let r = 1;
+  for (let i = 2; i <= n; i++) r *= i;
+  return r;
+}
+
+function permutations(n, k) {
+  let r = 1;
+  for (let i = 0; i < k; i++) r *= n - i;
+  return r;
+}
+
+function combinations(n, k) {
+  if (k < 0 || k > n) return 0;
+  return Math.round(permutations(n, k) / factorial(k));
+}
+
+const COUNTING_SCENARIOS = [
+  // Distinct roles: order matters (n P k).
+  () => {
+    const roles = shuffleInPlace(["CEO", "CFO", "COO", "CTO", "Chair", "Treasurer"]).slice(0, randInt(3, 4));
+    const n = randInt(7, 12);
+    const answer = permutations(n, roles.length);
+    return {
+      prompt:
+        `A start-up's board has ${n} members. ${roles.length} different positions — ${roles.join(", ")} — must ` +
+        `each be filled by a different board member. In how many different ways can the positions be filled?`,
+      answer,
+      distractors: [combinations(n, roles.length), Math.pow(n, roles.length), factorial(roles.length) * n, answer / 2],
+      explanation:
+        `The positions are different, so order matters: ${n} choices for the first, ${n - 1} for the second, and so on — ` +
+        `${n}P${roles.length} = ${Array.from({ length: roles.length }, (_, i) => n - i).join(" × ")} = ` +
+        `${answer.toLocaleString()}. (Treating the positions as identical gives only ${n}C${roles.length} = ` +
+        `${combinations(n, roles.length).toLocaleString()}; letting one person hold several gives ${n}^${roles.length}.)`,
+    };
+  },
+  // Team with an "at least one" constraint: complement counting.
+  () => {
+    const analysts = randInt(5, 9);
+    const managers = randInt(3, 5);
+    const k = randInt(3, 4);
+    const total = combinations(analysts + managers, k);
+    const noManager = combinations(analysts, k);
+    const answer = total - noManager;
+    const overcount = managers * combinations(analysts + managers - 1, k - 1); // pick "the" manager, then anyone
+    return {
+      prompt:
+        `A consulting office has ${analysts} analysts and ${managers} managers. A project team of ${k} people is ` +
+        `to be chosen, and it must include at least one manager. The roles within the team don't matter. How ` +
+        `many different teams are possible?`,
+      answer,
+      distractors: [total, overcount, managers * combinations(analysts, k - 1), noManager],
+      explanation:
+        `Count all teams, then remove the ones with no manager. All teams: ${analysts + managers}C${k} = ` +
+        `${total.toLocaleString()}. Teams of analysts only: ${analysts}C${k} = ${noManager.toLocaleString()}. ` +
+        `${total.toLocaleString()} − ${noManager.toLocaleString()} = ${answer.toLocaleString()}. (Choosing "the" ` +
+        `manager first and then anyone for the rest, ${managers} × ${analysts + managers - 1}C${k - 1} = ` +
+        `${overcount.toLocaleString()}, counts teams with two or more managers more than once.)`,
+    };
+  },
+  // Row seating where two people must sit together.
+  () => {
+    const n = randInt(5, 8);
+    const answer = 2 * factorial(n - 1);
+    return {
+      prompt:
+        `${n} colleagues are to sit in a row of ${n} seats for a panel photo. Two of them, Priya and Tom, insist ` +
+        `on sitting next to each other. How many different seating arrangements are possible?`,
+      answer,
+      distractors: [factorial(n), factorial(n - 1), factorial(n) - answer, 2 * factorial(n - 2)],
+      explanation:
+        `Glue Priya and Tom into one block: that's ${n - 1} units to arrange, in ${n - 1}! = ` +
+        `${factorial(n - 1).toLocaleString()} ways. The pair can sit in either order inside the block (×2), so ` +
+        `${answer.toLocaleString()} arrangements. (Forgetting the ×2 gives ${factorial(n - 1).toLocaleString()}; ` +
+        `${(factorial(n) - answer).toLocaleString()} is the number where they're NOT together.)`,
+    };
+  },
+  // Fewer seats than people, one person guaranteed a seat.
+  () => {
+    const seats = randInt(3, 5);
+    const people = seats + randInt(2, 5);
+    const answer = seats * permutations(people - 1, seats - 1);
+    return {
+      prompt:
+        `A client dinner has ${seats} numbered seats at the top table and ${people} people who could sit there. ` +
+        `The managing partner must be given one of the ${seats} seats (any of them); the other seats go to any of ` +
+        `the remaining people, and it matters who sits in which seat. How many different top-table arrangements ` +
+        `are there?`,
+      answer,
+      distractors: [
+        permutations(people, seats),
+        permutations(people - 1, seats - 1),
+        seats * combinations(people - 1, seats - 1),
+        permutations(people - 1, seats),
+      ],
+      explanation:
+        `Place the managing partner first: ${seats} seat choices. The other ${seats - 1} numbered seats are filled in ` +
+        `order from the ${people - 1} others: ${people - 1}P${seats - 1} = ${permutations(people - 1, seats - 1).toLocaleString()}. ` +
+        `${seats} × ${permutations(people - 1, seats - 1).toLocaleString()} = ${answer.toLocaleString()}. (With no ` +
+        `restriction it would be ${people}P${seats} = ${permutations(people, seats).toLocaleString()}.)`,
+    };
+  },
+];
+
+function genCounting() {
+  const s = choice(COUNTING_SCENARIOS)();
+  return buildQuestion(
+    "Counting & arrangements",
+    s.prompt,
+    s.answer,
+    s.distractors,
+    (v) => `${Math.round(v).toLocaleString()}`,
+    s.explanation
+  );
+}
+
+const pct1 = (p) => `${(p * 100).toFixed(1)}%`;
+
+const PROBABILITY_SCENARIOS = [
+  // Drawing without replacement: exactly one of a kind.
+  () => {
+    const faulty = randInt(3, 7);
+    const good = randInt(9, 20);
+    const total = faulty + good;
+    const answer = (faulty * good) / combinations(total, 2);
+    const p = faulty / total;
+    return {
+      prompt:
+        `A crate holds ${total} units, ${faulty} of which are faulty. An inspector picks 2 units at random, ` +
+        `without putting the first back. What is the probability that exactly one of the two is faulty?`,
+      answer,
+      distractors: [(faulty / total) * (good / (total - 1)), 2 * p * (1 - p), p, (faulty / total) * ((faulty - 1) / (total - 1))],
+      explanation:
+        `Faulty then good: ${faulty}/${total} × ${good}/${total - 1}; good then faulty: ${good}/${total} × ` +
+        `${faulty}/${total - 1}. Both orders count, so P = 2 × ${faulty} × ${good} ÷ (${total} × ${total - 1}) = ` +
+        `${pct1(answer)}. (Counting only one order gives half that; treating the draws as independent, with ` +
+        `replacement, gives ${pct1(2 * p * (1 - p))}.)`,
+    };
+  },
+  // At least one success across independent attempts.
+  () => {
+    const pct = randInt(12, 35);
+    const n = randInt(3, 6);
+    const answer = 1 - Math.pow(1 - pct / 100, n);
+    return {
+      prompt:
+        `A sales team pitches to ${n} prospective clients this month. Each pitch independently has a ${pct}% ` +
+        `chance of winning the contract. What is the probability that the team wins at least one contract?`,
+      answer,
+      distractors: [...((n * pct) / 100 < 1 ? [(n * pct) / 100] : []), Math.pow(pct / 100, n), Math.pow(1 - pct / 100, n), 1 - Math.pow(pct / 100, n), n * (pct / 100) * Math.pow(1 - pct / 100, n - 1)],
+      explanation:
+        `Use the complement: P(no wins) = (1 − ${pct / 100})^${n} = ${pct1(Math.pow(1 - pct / 100, n))}, so P(at least ` +
+        `one) = 1 − that = ${pct1(answer)}. (Adding ${n} × ${pct}% double-counts outcomes with several wins; ` +
+        `${pct1(n * (pct / 100) * Math.pow(1 - pct / 100, n - 1))} is the chance of exactly one.)`,
+    };
+  },
+  // Reverse conditional probability (Bayes) across two suppliers.
+  () => {
+    const shareA = randInt(5, 8) * 10;
+    const rateA = randInt(2, 5);
+    const rateB = rateA + randInt(2, 6);
+    const pA = (shareA / 100) * (rateA / 100);
+    const pB = ((100 - shareA) / 100) * (rateB / 100);
+    const answer = pA / (pA + pB);
+    return {
+      prompt:
+        `A retailer buys ${shareA}% of its stock from Supplier A and the rest from Supplier B. ${rateA}% of ` +
+        `Supplier A's items are returned as faulty, compared with ${rateB}% of Supplier B's. An item is returned ` +
+        `as faulty. What is the probability it came from Supplier A?`,
+      answer,
+      distractors: [shareA / 100, rateA / (rateA + rateB), pA, 1 - answer],
+      explanation:
+        `Faulty from A: ${shareA}% × ${rateA}% = ${(pA * 100).toFixed(2)}% of all items. Faulty from B: ` +
+        `${100 - shareA}% × ${rateB}% = ${(pB * 100).toFixed(2)}%. Given the item is faulty, P(A) = ` +
+        `${(pA * 100).toFixed(2)} ÷ (${(pA * 100).toFixed(2)} + ${(pB * 100).toFixed(2)}) = ${pct1(answer)}. ` +
+        `(${shareA}% ignores that B's items are more often faulty; ${pct1(pA)} is the chance an item is BOTH ` +
+        `from A and faulty, before knowing it was returned.)`,
+    };
+  },
+  // Random seating: two specific people end up next to each other.
+  () => {
+    const n = randInt(5, 10);
+    const answer = 2 / n;
+    return {
+      prompt:
+        `${n} candidates are seated at random in a row of ${n} chairs for an assessment-centre group exercise. ` +
+        `What is the probability that two particular candidates, Ana and Ben, end up sitting next to each other?`,
+      answer,
+      distractors: [1 / n, 1 / (n - 1), 2 / (n - 1), 1 / combinations(n, 2)],
+      explanation:
+        `Arrangements with them together: treat them as one block, (${n} − 1)! × 2. All arrangements: ${n}!. ` +
+        `P = 2 × (${n - 1})! ÷ ${n}! = 2/${n} = ${pct1(answer)}. (Equivalently, ${n - 1} adjacent pairs of chairs ` +
+        `out of ${n}C2 = ${combinations(n, 2)} pairs.)`,
+    };
+  },
+];
+
+function genProbability() {
+  const s = choice(PROBABILITY_SCENARIOS)();
+  return buildQuestion("Probability", s.prompt, s.answer, s.distractors, pct1, s.explanation);
+}
+
 /* ---------- question generators (close reading) ---------- */
 /* These require catching a detail in the wording — a negation, a direction
    of adjustment, a unit mismatch, or an irrelevant distraction — not just
@@ -1153,6 +1359,8 @@ const STANDARD_GENERATORS = [
   genMarketShareDoubling,
   genContainerPacking,
   genShippingCost,
+  genCounting,
+  genProbability,
 ];
 
 const CLOSE_READING_GENERATORS = [
