@@ -76,12 +76,16 @@ python3 -m http.server 8000
   doubling time (a share or metric doubles every N months — how long until
   it reaches a target level, which only resolves with a logarithm since the
   target rarely lines up with a whole number of doublings), and two
-  Bain-style shipping-container questions — how many 1.22 × 0.5 × 0.5 m
-  boxes fit in a 12.036 × 2.253 × 2.285 m container when boxes can be
-  rotated and mixed in orientation (180: the obvious all-lengthwise packing
-  gives only 144), and a shipping-spend question where a different box
-  size must be oriented to fit, the weekly order rounded up to whole
-  containers, and the cost carried across a year).
+  Bain-style shipping-container questions, with the container and box
+  sizes randomised every attempt — how many long, slim boxes fit when they
+  can be rotated and the container split into up to three sections facing
+  different ways (the mixed loading always beats the obvious
+  every-box-the-same-way answer; the original interview's 1.22 × 0.5 ×
+  0.5 m box in a 12.036 × 2.253 × 2.285 m container gives 180, not 144),
+  and a shipping-spend question where a box must be oriented to fit, the
+  weekly order rounded up to whole containers, and the cost carried
+  across a year. The answers come from an exhaustive search of every
+  orientation and wall position, run in the browser).
 - No charts, graphs, or diagrams — every question is text only, as requested;
   the logic game states its rules as a plain numbered list.
 - Shows a **countdown timer** against a **recommended completion time of
