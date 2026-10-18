@@ -1142,65 +1142,109 @@ const oneIn = (p) => `1 in ${Math.round(1 / p).toLocaleString()}`;
 const pct2 = (p) => `${(p * 100).toFixed(2)}%`;
 const productOf = (n, k) => Array.from({ length: k }, (_, i) => n - i).join(" × ");
 
+// Settings for the "k ordered slots, n > k candidates" scenarios, so the same
+// maths turns up as chairs, race places, loading bays and so on.
+const PERMUTATION_SETTINGS = [
+  {
+    intro: (n, k) => `A panel has ${k} chairs in a row on stage and ${n} candidates hoping to sit on it; the ${n - k} left over stand at the back.`,
+    orderNote: "swapping two seated candidates counts as a different seating",
+    outcomes: "seatings", assignment: "seating", slots: "chairs", who: "candidates",
+    a: "Ana", b: "Ben", first: "takes the left-most chair", second: "takes the second chair from the left", both: "get a chair",
+  },
+  {
+    intro: (n, k) => `${n} runners enter a race, and only the top ${k} finishing positions are recorded (there are no ties).`,
+    orderNote: "the same runners finishing in a different order is a different result",
+    outcomes: (k) => `top-${k} results`, assignment: "finishing order", slots: "places", who: "runners",
+    a: "Amara", b: "Jonas", first: "finishes 1st", second: "finishes 2nd", both: (k) => `finish in the top ${k}`,
+  },
+  {
+    intro: (n, k) => `${n} delivery vans arrive at a depot with ${k} numbered loading bays; the ${n - k} that don't get a bay wait outside.`,
+    orderNote: "which van is in which bay matters",
+    outcomes: "bay allocations", assignment: "allocation", slots: "bays", who: "vans",
+    a: "Van A", b: "Van B", first: "gets bay 1", second: "gets bay 2", both: "get a bay",
+  },
+  {
+    intro: (n, k) => `A firm has ${k} back-to-back interview slots on Monday and ${n} shortlisted candidates, so ${n - k} will be seen later in the week.`,
+    orderNote: "who is seen in which slot matters",
+    outcomes: "Monday schedules", assignment: "schedule", slots: "slots", who: "candidates",
+    a: "Priya", b: "Tom", first: "gets the first slot", second: "gets the second slot", both: "are interviewed on Monday",
+  },
+  {
+    intro: (n, k) => `A shop window has ${k} display positions from left to right, and the manager has ${n} different products to choose from.`,
+    orderNote: "the same products in a different arrangement is a different display",
+    outcomes: "window displays", assignment: "display", slots: "positions", who: "products",
+    a: "the new watch", b: "the leather bag", first: "is in position 1", second: "is in position 2", both: "are in the window",
+  },
+  {
+    intro: (n, k) => `${n} team members volunteer for ${k} speaking slots at a conference, and the talks run in a fixed order.`,
+    orderNote: "the order of the speakers matters",
+    outcomes: "speaker line-ups", assignment: "line-up", slots: "slots", who: "volunteers",
+    a: "Mia", b: "Leo", first: "speaks first", second: "speaks second", both: "get to speak",
+  },
+];
+
+// Settings use either fixed text or a function of the slot count.
+const settingText = (value, k) => (typeof value === "function" ? value(k) : value);
+
 const PERMUTATION_SCENARIOS = [
-  // Straight count: n people into k distinct chairs.
+  // Straight count: n candidates into k ordered slots (always fewer slots than candidates).
   () => {
-    const k = randInt(4, 6);
-    const n = k + randInt(2, 4);
+    const set = choice(PERMUTATION_SETTINGS);
+    const k = randInt(3, 6);
+    const n = k + randInt(2, 5);
     const answer = permutations(n, k);
     return {
-      prompt:
-        `A panel has ${k} chairs in a row on stage and ${n} candidates waiting to sit on it. Any candidate can ` +
-        `take any chair, the ${n - k} left over stand at the back, and swapping two seated candidates counts as ` +
-        `a different seating. How many different seatings of the ${k} chairs are possible?`,
+      prompt: `${set.intro(n, k)} Order matters — ${set.orderNote}. How many different ${settingText(set.outcomes, k)} are possible?`,
       answer,
       format: (v) => Math.round(v).toLocaleString(),
       distractors: [combinations(n, k), Math.pow(n, k), factorial(k), permutations(n, k - 1)],
       explanation:
-        `Fill the chairs one at a time: ${n} choices for the first, ${n - 1} for the second, and so on for ${k} ` +
-        `chairs — ${n}P${k} = ${n}! ÷ (${n} − ${k})! = ${productOf(n, k)} = ${answer.toLocaleString()}. (${n}C${k} = ` +
-        `${combinations(n, k).toLocaleString()} only counts WHO sits, not where; ${n}^${k} lets one person take ` +
-        `several chairs.)`,
+        `Fill the ${set.slots} one at a time: ${n} choices for the first, ${n - 1} for the second, and so on for ${k} ` +
+        `${set.slots} — ${n}P${k} = ${n}! ÷ (${n} − ${k})! = ${productOf(n, k)} = ${answer.toLocaleString()}. (${n}C${k} = ` +
+        `${combinations(n, k).toLocaleString()} only counts WHICH ${set.who} are chosen, not their order; ${n}^${k} ` +
+        `would let the same one fill several ${set.slots}.)`,
     };
   },
-  // Two named people in two specific chairs.
+  // Two named candidates in the first two slots.
   () => {
+    const set = choice(PERMUTATION_SETTINGS);
     const k = randInt(3, 6);
-    const n = k + randInt(1, 4);
+    const n = k + randInt(2, 4);
     const answer = permutations(n - 2, k - 2) / permutations(n, k);
     return {
       prompt:
-        `${n} interns are randomly assigned to ${k} numbered desks (the rest hot-desk elsewhere), every ` +
-        `ordered assignment being equally likely. What is the probability that Alex gets desk 1 and Sam gets ` +
-        `desk 2?`,
+        `${set.intro(n, k)} Every possible ${set.assignment} is equally likely. What is the probability that ` +
+        `${set.a} ${set.first} and ${set.b} ${set.second}?`,
       answer,
       format: oneIn,
       distractors: [1 / permutations(n, k), 2 / (n * (n - 1)), 1 / (n * n), 1 / combinations(n, 2)],
       explanation:
-        `Total assignments: ${n}P${k} = ${permutations(n, k).toLocaleString()}. With Alex and Sam fixed in desks 1 and ` +
-        `2, the other ${k - 2} desks are filled from ${n - 2} interns: ${n - 2}P${k - 2} = ` +
+        `Total ${set.assignment}s: ${n}P${k} = ${permutations(n, k).toLocaleString()}. With ${set.a} and ${set.b} fixed in ` +
+        `the first two ${set.slots}, the remaining ${k - 2} ${k - 2 === 1 ? "is" : "are"} filled from the other ${n - 2}: ${n - 2}P${k - 2} = ` +
         `${permutations(n - 2, k - 2).toLocaleString()}. P = ${permutations(n - 2, k - 2).toLocaleString()} ÷ ` +
         `${permutations(n, k).toLocaleString()} = 1/(${n} × ${n - 1}) = ${oneIn(answer)}. (Allowing either order would ` +
-        `double it; 1/${n}P${k} is the chance of one exact full seating.)`,
+        `double it; 1/${n}P${k} is the chance of one exact full ${set.assignment}.)`,
     };
   },
-  // Both named people get a seat at all.
+  // Both named candidates get one of the slots.
   () => {
+    const set = choice(PERMUTATION_SETTINGS);
     const k = randInt(3, 6);
     const n = k + randInt(2, 5);
     const answer = (k * (k - 1)) / (n * (n - 1));
     return {
       prompt:
-        `${n} people turn up for ${k} numbered seats at a sold-out talk, and seats are allocated at random, ` +
-        `with every ordered allocation equally likely. What is the probability that both Mia and Leo get a seat?`,
+        `${set.intro(n, k)} Every possible ${set.assignment} is equally likely. What is the probability that both ` +
+        `${set.a} and ${set.b} ${settingText(set.both, k)}?`,
       answer,
       format: pct1,
       distractors: [Math.pow(k / n, 2), k / n, (k * (k - 1)) / (n * n), 2 / n],
       explanation:
-        `Allocations where both are seated: choose their two seats in order (${k} × ${k - 1}), then fill the other ` +
-        `${k - 2} from the remaining ${n - 2}: ${k} × ${k - 1} × ${n - 2}P${k - 2}. Dividing by ${n}P${k} leaves ` +
-        `(${k} × ${k - 1}) ÷ (${n} × ${n - 1}) = ${pct1(answer)}. (Squaring ${k}/${n} treats the two as independent, ` +
-        `but once Mia has a seat there are fewer left for Leo.)`,
+        `${set.assignment[0].toUpperCase() + set.assignment.slice(1)}s including both: place the two of them in order ` +
+        `(${k} × ${k - 1} ways), then fill the other ${k - 2} ${set.slots} from the remaining ${n - 2}: ${k} × ${k - 1} × ` +
+        `${n - 2}P${k - 2}. Dividing by ${n}P${k} leaves (${k} × ${k - 1}) ÷ (${n} × ${n - 1}) = ${pct1(answer)}. ` +
+        `(Squaring ${k}/${n} treats the two as independent, but once one is in there are fewer ${set.slots} left for ` +
+        `the other.)`,
     };
   },
   // Only one of the k! orders of a chosen group is "in order".
