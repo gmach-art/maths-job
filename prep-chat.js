@@ -40,7 +40,7 @@ const QUESTION_KEYWORDS = {
     genMarketShareDoubling: ["doubling time", "doubling", "logarithm", "log", "exponential", "market share"],
     genContainerPacking: ["shipping container", "container", "packing", "boxes fit", "dimensions", "rotate", "bain", "3d", "volume"],
     genShippingCost: ["shipping cost", "shipping", "shipments", "freight", "logistics", "cost per container"],
-    genPermutations: ["permutations probability", "probability permutation", "permutation probability", "chairs and people", "people and chairs", "seat probability", "safe code", "pin code", "digit code", "height order", "chairs", "chair"],
+    genPermutations: ["permutations probability", "probability permutation", "permutation probability", "chairs and people", "people and chairs", "seat probability", "safe code", "pin code", "digit code", "height order", "chairs", "chair", "podium", "finishing order", "race positions", "top 3", "loading bays", "interview slots", "speaking slots", "line up"],
     genCounting: ["permutation", "permutations", "combination", "combinations", "counting", "arrangements", "arrange", "how many ways", "ways", "seats", "chairs", "ncr", "npr", "factorial"],
     genProbability: ["probability", "probabilities", "chance", "odds", "likelihood", "bayes", "conditional"],
   },
