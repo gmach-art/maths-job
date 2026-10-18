@@ -46,7 +46,7 @@ python3 -m http.server 8000
 
 ## What the Prep quiz does
 
-- Generates **26 multiple-choice questions** per attempt — one of every
+- Generates **27 multiple-choice questions** per attempt — one of every
   question type currently in the trainer, shuffled into a different order
   each time with freshly randomised numbers, so no type is ever left out and
   no playthrough repeats the last one. That's: **one LSAT-style logic game**
@@ -62,7 +62,7 @@ python3 -m http.server 8000
   projected forward by a growth rate before the regions can be ranked, a
   staffing-cost question mixing full-time and part-time schedules, and a
   threshold/marginal commission calculation — details that are easy to miss
-  and that take real work to untangle), plus **20 word-problem and
+  and that take real work to untangle), plus **21 word-problem and
   case/accounting questions** (weighted averages, speed/distance with
   staggered departure times, simultaneous equations, percentages, ratios
   (three always-distinct department headcounts combined with a growth
@@ -91,11 +91,15 @@ python3 -m http.server 8000
   one person is guaranteed a place), and a probability question (one of:
   exactly one faulty item drawn without replacement, at least one success
   across independent attempts, which supplier a faulty item came from, or
-  two people seated at random ending up side by side).
+  two people seated at random ending up side by side), and a permutations
+  question (one of: how many ways n people can fill k chairs, the chance
+  two named people land in two specific seats, the chance both get a seat,
+  the chance a random seating comes out in height order, or the chance of
+  cracking a no-repeat digit code in a set number of tries).
 - No charts, graphs, or diagrams — every question is text only, as requested;
   the logic game states its rules as a plain numbered list.
 - Shows a **countdown timer** against a **recommended completion time of
-  26:00** (1 minute per question — the allotted time always matches the
+  27:00** (1 minute per question — the allotted time always matches the
   question count). The test auto-submits if time runs out.
 - Answers lock in once selected (no changing your mind, like the real thing),
   and a full review with worked explanations is shown at the end.

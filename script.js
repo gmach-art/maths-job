@@ -4,7 +4,7 @@
 // question bank alongside the other one without their helpers clashing.
 (() => {
 
-const TOTAL_QUESTIONS = 26; // one of every question type currently in the generator pools
+const TOTAL_QUESTIONS = 27; // one of every question type currently in the generator pools
 const TARGET_SECONDS = TOTAL_QUESTIONS * 60; // recommended completion time: 1 minute per question
 const CLOSE_READING_COUNT = 5;
 const LOGIC_GAME_COUNT = 1;
@@ -1134,6 +1134,121 @@ function genProbability() {
   return buildQuestion("Probability", s.prompt, s.answer, s.distractors, pct1, s.explanation);
 }
 
+/* Permutations, both as a straight count ("how many ways can 7 people fill
+   5 chairs?") and as the denominator of a probability, where the order of
+   seats or digits is what makes the sample space a permutation. */
+
+const oneIn = (p) => `1 in ${Math.round(1 / p).toLocaleString()}`;
+const pct2 = (p) => `${(p * 100).toFixed(2)}%`;
+const productOf = (n, k) => Array.from({ length: k }, (_, i) => n - i).join(" × ");
+
+const PERMUTATION_SCENARIOS = [
+  // Straight count: n people into k distinct chairs.
+  () => {
+    const k = randInt(4, 6);
+    const n = k + randInt(2, 4);
+    const answer = permutations(n, k);
+    return {
+      prompt:
+        `A panel has ${k} chairs in a row on stage and ${n} candidates waiting to sit on it. Any candidate can ` +
+        `take any chair, the ${n - k} left over stand at the back, and swapping two seated candidates counts as ` +
+        `a different seating. How many different seatings of the ${k} chairs are possible?`,
+      answer,
+      format: (v) => Math.round(v).toLocaleString(),
+      distractors: [combinations(n, k), Math.pow(n, k), factorial(k), permutations(n, k - 1)],
+      explanation:
+        `Fill the chairs one at a time: ${n} choices for the first, ${n - 1} for the second, and so on for ${k} ` +
+        `chairs — ${n}P${k} = ${n}! ÷ (${n} − ${k})! = ${productOf(n, k)} = ${answer.toLocaleString()}. (${n}C${k} = ` +
+        `${combinations(n, k).toLocaleString()} only counts WHO sits, not where; ${n}^${k} lets one person take ` +
+        `several chairs.)`,
+    };
+  },
+  // Two named people in two specific chairs.
+  () => {
+    const k = randInt(3, 6);
+    const n = k + randInt(1, 4);
+    const answer = permutations(n - 2, k - 2) / permutations(n, k);
+    return {
+      prompt:
+        `${n} interns are randomly assigned to ${k} numbered desks (the rest hot-desk elsewhere), every ` +
+        `ordered assignment being equally likely. What is the probability that Alex gets desk 1 and Sam gets ` +
+        `desk 2?`,
+      answer,
+      format: oneIn,
+      distractors: [1 / permutations(n, k), 2 / (n * (n - 1)), 1 / (n * n), 1 / combinations(n, 2)],
+      explanation:
+        `Total assignments: ${n}P${k} = ${permutations(n, k).toLocaleString()}. With Alex and Sam fixed in desks 1 and ` +
+        `2, the other ${k - 2} desks are filled from ${n - 2} interns: ${n - 2}P${k - 2} = ` +
+        `${permutations(n - 2, k - 2).toLocaleString()}. P = ${permutations(n - 2, k - 2).toLocaleString()} ÷ ` +
+        `${permutations(n, k).toLocaleString()} = 1/(${n} × ${n - 1}) = ${oneIn(answer)}. (Allowing either order would ` +
+        `double it; 1/${n}P${k} is the chance of one exact full seating.)`,
+    };
+  },
+  // Both named people get a seat at all.
+  () => {
+    const k = randInt(3, 6);
+    const n = k + randInt(2, 5);
+    const answer = (k * (k - 1)) / (n * (n - 1));
+    return {
+      prompt:
+        `${n} people turn up for ${k} numbered seats at a sold-out talk, and seats are allocated at random, ` +
+        `with every ordered allocation equally likely. What is the probability that both Mia and Leo get a seat?`,
+      answer,
+      format: pct1,
+      distractors: [Math.pow(k / n, 2), k / n, (k * (k - 1)) / (n * n), 2 / n],
+      explanation:
+        `Allocations where both are seated: choose their two seats in order (${k} × ${k - 1}), then fill the other ` +
+        `${k - 2} from the remaining ${n - 2}: ${k} × ${k - 1} × ${n - 2}P${k - 2}. Dividing by ${n}P${k} leaves ` +
+        `(${k} × ${k - 1}) ÷ (${n} × ${n - 1}) = ${pct1(answer)}. (Squaring ${k}/${n} treats the two as independent, ` +
+        `but once Mia has a seat there are fewer left for Leo.)`,
+    };
+  },
+  // Only one of the k! orders of a chosen group is "in order".
+  () => {
+    const k = randInt(4, 6);
+    const n = k + randInt(2, 5);
+    const answer = 1 / factorial(k);
+    return {
+      prompt:
+        `From a team of ${n} (all different heights), ${k} are picked at random and seated in a row of ${k} ` +
+        `chairs in a random order. What is the probability that the ${k} seated people end up in increasing ` +
+        `order of height from left to right?`,
+      answer,
+      format: oneIn,
+      distractors: [1 / permutations(n, k), 1 / combinations(n, k), 2 / factorial(k), 1 / k],
+      explanation:
+        `Whoever the ${k} people are, they can sit in ${k}! = ${factorial(k)} equally likely orders, and exactly one ` +
+        `of them runs shortest to tallest — so P = 1/${k}! = ${oneIn(answer)}. Which ${k} are picked doesn't matter. ` +
+        `(Equivalently: ${n}C${k} ordered-by-height seatings out of ${n}P${k} total.)`,
+    };
+  },
+  // Guessing a code of distinct digits.
+  () => {
+    const k = randInt(3, 4);
+    const tries = randInt(2, 9) * 10;
+    const total = permutations(10, k);
+    const answer = tries / total;
+    return {
+      prompt:
+        `An office safe uses a ${k}-digit code made of ${k} DIFFERENT digits (0–9, no repeats), and the order ` +
+        `of the digits matters. Someone tries ${tries} different codes at random. What is the probability they ` +
+        `open the safe?`,
+      answer,
+      format: pct2,
+      distractors: [tries / Math.pow(10, k), tries / combinations(10, k), 1 / total, tries / permutations(10, k - 1)],
+      explanation:
+        `Possible codes: 10P${k} = ${productOf(10, k)} = ${total.toLocaleString()} (not 10^${k} = ` +
+        `${Math.pow(10, k).toLocaleString()}, since digits can't repeat; not 10C${k}, since order matters). ` +
+        `${tries} distinct guesses cover ${tries} of them: ${tries} ÷ ${total.toLocaleString()} = ${pct2(answer)}.`,
+    };
+  },
+];
+
+function genPermutations() {
+  const s = choice(PERMUTATION_SCENARIOS)();
+  return buildQuestion("Permutations & probability", s.prompt, s.answer, s.distractors, s.format, s.explanation);
+}
+
 /* ---------- question generators (close reading) ---------- */
 /* These require catching a detail in the wording — a negation, a direction
    of adjustment, a unit mismatch, or an irrelevant distraction — not just
@@ -1365,6 +1480,7 @@ const STANDARD_GENERATORS = [
   genShippingCost,
   genCounting,
   genProbability,
+  genPermutations,
 ];
 
 const CLOSE_READING_GENERATORS = [
